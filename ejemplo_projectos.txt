@@ -1,0 +1,4 @@
+Crear ejemplos didacticos de proyectos usando Python
+1) Videojuego del estilo de Mario bros usando una tematica Ecuatoriana
+2) Pagina web que usa API gratuita para tener un chatbot
+3) Pagina web de portafolio, poner apodo y projectos trabajados
