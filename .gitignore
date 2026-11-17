@@ -1,0 +1,23 @@
+# Entorno virtual
+.venv/
+venv/
+
+# Secretos
+.env
+.env.example
+
+
+# Python
+__pycache__/
+*.pyc
+
+# Base de datos local
+*.sqlite3
+
+# Archivos subidos y estáticos recolectados
+media/
+staticfiles/
+
+# IDE
+.idea/
+.vscode/
