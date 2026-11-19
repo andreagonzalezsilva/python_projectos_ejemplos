@@ -38,6 +38,7 @@ class Jugador:
         self.t_crecer = 0.0
         self.t_anim = 0.0
         self.t_total = 0.0
+        self.t_aire = 0.0               # segundos seguidos en el aire (anima los brazos)
         self.modo = "normal"            # normal | meta_bajar | meta_caminar
         self.t_modo = 0.0
         self.golpe_bloque = None        # (col, fila) golpeado desde abajo en este cuadro
@@ -121,7 +122,7 @@ class Jugador:
         if self.modo == "meta_caminar":
             self.t_modo += dt
             self.vx = 50
-            self.vy = min(self.vy + ajustes.GRAVEDAD * dt, ajustes.VEL_CAIDA_MAX)
+            self.vy = min(self.vy + ajustes.GRAVEDAD_JUGADOR * dt, ajustes.VEL_CAIDA_MAX)
             nivel.mover(self, self.vx * dt, 0)
             col = nivel.mover(self, 0, self.vy * dt)
             if col["abajo"]:
@@ -165,7 +166,7 @@ class Jugador:
             self.salto_cortado = True
 
         # ---- gravedad y movimiento por ejes
-        self.vy = min(self.vy + ajustes.GRAVEDAD * dt, ajustes.VEL_CAIDA_MAX)
+        self.vy = min(self.vy + ajustes.GRAVEDAD_JUGADOR * dt, ajustes.VEL_CAIDA_MAX)
         col = nivel.mover(self, self.vx * dt, 0)
         if col["izq"] or col["der"]:
             self.vx = 0.0
@@ -184,6 +185,7 @@ class Jugador:
 
         # ---- animacion
         self.t_anim += abs(self.vx) * dt
+        self.t_aire = 0.0 if self.en_suelo else self.t_aire + dt
 
     # ------------------------------------------------------------ dibujo
     def _animacion(self):
@@ -192,7 +194,8 @@ class Jugador:
         if self.modo == "meta_bajar":
             return "quieto", 0
         if not self.en_suelo and self.modo != "meta_caminar":
-            return ("saltar", 0) if self.vy < 0 else ("caer", 0)
+            # los brazos se agitan: un cuadro nuevo cada 0,1 s
+            return ("saltar" if self.vy < 0 else "caer"), int(self.t_aire / 0.1)
         if abs(self.vx) > 8:
             return "caminar", int(self.t_anim / 9)
         return "quieto", 0

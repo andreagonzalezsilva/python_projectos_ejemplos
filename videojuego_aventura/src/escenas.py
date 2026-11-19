@@ -275,7 +275,8 @@ class Juego(Escena):
         self.nivel.dibujar(lienzo)
         if not con_hud:
             return
-        interfaz.hud(lienzo, self.nivel, self.motor.datos["personaje"], self.motor.datos["accesorio"])
+        interfaz.hud(lienzo, self.nivel, self.motor.datos["personaje"], self.motor.datos["accesorio"],
+                     self.motor.sonido)
         if self.t_cartel > 0:
             visible = min(1.0, self.t_cartel / 0.5)
             nombre = textos.t(self.nivel.datos["nombre"])
@@ -316,6 +317,11 @@ class Pausa(Escena):
         interfaz.oscurecer(lienzo, 150)
         interfaz.texto_grande(lienzo, textos.t("pausa"), (ajustes.ANCHO // 2, 56), "#FFFFFF", escala=2)
         self.menu.dibujar(lienzo)
+        sonido = self.motor.sonido
+        musica = "OFF" if sonido.musica_silenciada else "ON"
+        efectos = "OFF" if sonido.efectos_silenciados else "ON"
+        interfaz.texto(lienzo, "M: %s %s    N: %s %s" % (textos.t("musica"), musica, textos.t("efectos"), efectos),
+                       (ajustes.ANCHO // 2, 150), centrado=True, tam=8, color_texto="#DDE6FF")
 
 
 # ======================================================================
@@ -358,6 +364,8 @@ class FinNivel(Escena):
 
     def actualizar(self, dt):
         self.nivel.reloj += dt
+        if self.nivel.bandera:
+            self.nivel.bandera.actualizar(dt)
         if not self.terminado:
             self.t_cuenta += dt
             while self.t_cuenta >= 0.012 and self.restante > 0:
@@ -465,7 +473,7 @@ class Victoria(_Final):
         lienzo.blit(sprites.bandera_ecuador(36, 24, int(self.tiempo * 5)), (ajustes.ANCHO // 2 - 18, 118))
         self.dibujar_encabezado(lienzo)
         datos = self.motor.datos
-        imagen = sprites.personaje(datos["personaje"], datos["accesorio"], False, "saltar" if int(self.tiempo * 3) % 2 == 0 else "quieto", 0, True)
+        imagen = sprites.personaje(datos["personaje"], datos["accesorio"], False, "saltar" if int(self.tiempo * 3) % 2 == 0 else "quieto", int(self.tiempo * 6), True)
         lienzo.blit(pygame.transform.scale(imagen, (32, 32)), (ajustes.ANCHO // 2 - 70, 122))
         lienzo.blit(pygame.transform.scale(imagen, (32, 32)), (ajustes.ANCHO // 2 + 38, 122))
         self.menu.y = 150

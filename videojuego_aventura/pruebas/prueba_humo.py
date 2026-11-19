@@ -121,6 +121,7 @@ def main():
     v.comprobar(isinstance(escena, Juego) and escena.nivel.jefe is not None, "empieza el jefe Cotopaxi")
     nivel = escena.nivel
     motor.entrada.limpiar()
+    nivel.jugador.invulnerable = 9999
     avanzar(60 * 3)
     # esperar la erupcion para fotografiarla
     for _ in range(60 * 12):

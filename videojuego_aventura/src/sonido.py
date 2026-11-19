@@ -1,31 +1,22 @@
 """Sonido sintetizado con la biblioteca estandar (array, math, random). Sin archivos externos.
 
-Genera ondas cuadrada, triangular y de ruido a 22050 Hz, mono, 16 bits.
+Efectos: ondas cuadrada, triangular y de ruido a 22050 Hz, mono, 16 bits. La musica la crea sintesis.py
+a partir de las partituras de musica.py y se guarda en cache_sonido/.
 Si no hay dispositivo de audio, crear Sonido() lanza una excepcion y el motor usa SonidoNulo.
 """
 import array
+import hashlib
+import json
 import math
+import os
 import random
 
 import pygame
 
-FRECUENCIA = 22050
-AMPLITUD_MAX = 32767
+from musica import MUSICAS
+from sintesis import AMPLITUD_MAX, FRECUENCIA, crear_cancion
 
-# ======================================================================
-#  Notas y ondas
-# ======================================================================
-_NOTAS = {"C": 0, "C#": 1, "D": 2, "D#": 3, "E": 4, "F": 5, "F#": 6, "G": 7, "G#": 8, "A": 9, "A#": 10, "B": 11}
-
-
-def frecuencia(nota):
-    """'A4' -> 440.0. 'R' (silencio) -> 0."""
-    if nota == "R":
-        return 0.0
-    nombre, octava = nota[:-1], int(nota[-1])
-    semitonos = 12 * (octava - 4) + _NOTAS[nombre] - 9
-    return 440.0 * 2 ** (semitonos / 12)
-
+_RAIZ = os.path.dirname(os.path.abspath(__file__))
 
 def segmento(f_inicio, f_fin, duracion, tipo="cuadrada", volumen=0.3):
     """Un sonido que desliza su frecuencia de f_inicio a f_fin, con envolvente que decae."""
@@ -50,25 +41,6 @@ def segmento(f_inicio, f_fin, duracion, tipo="cuadrada", volumen=0.3):
     return salida
 
 
-def nota_constante(frec, duracion, tipo, volumen):
-    """Nota de musica: onda de un periodo repetida (rapido) y un pequeno fundido al final."""
-    n = int(FRECUENCIA * duracion)
-    if frec <= 0:
-        return [0] * n
-    periodo = max(2, int(round(FRECUENCIA / frec)))
-    alto = int(AMPLITUD_MAX * volumen)
-    if tipo == "cuadrada":
-        mitad = periodo // 2
-        onda = [alto] * mitad + [-alto] * (periodo - mitad)
-    else:
-        onda = [int(alto * (4 * abs(i / periodo - 0.5) - 1)) for i in range(periodo)]
-    muestras = (onda * (n // periodo + 1))[:n]
-    fundido = min(n, int(0.012 * FRECUENCIA))
-    for k in range(fundido):
-        muestras[n - 1 - k] = int(muestras[n - 1 - k] * k / fundido)
-    return muestras
-
-
 def a_sonido(muestras, volumen=1.0):
     buffer = array.array("h", [max(-32768, min(32767, int(m))) for m in muestras])
     sonido = pygame.mixer.Sound(buffer=buffer.tobytes())
@@ -79,6 +51,8 @@ def a_sonido(muestras, volumen=1.0):
 # ======================================================================
 #  Efectos: lista de (frec_inicio, frec_fin, duracion, tipo, volumen)
 # ======================================================================
+FACTOR_TONO = 1.0        # los efectos suenan a este multiplo de su frecuencia (menor que 1 = mas graves)
+
 EFECTOS = {
     "saltar": [(280, 640, 0.16, "cuadrada", 0.22)],
     "coleccionable": [(988, 988, 0.05, "cuadrada", 0.2), (1319, 1319, 0.16, "cuadrada", 0.2)],
@@ -92,12 +66,16 @@ EFECTOS = {
     "romper": [(0, 0, 0.18, "ruido", 0.35), (200, 60, 0.12, "cuadrada", 0.2)],
     "checkpoint": [(523, 523, 0.08, "cuadrada", 0.2), (659, 659, 0.08, "cuadrada", 0.2),
                    (784, 784, 0.18, "cuadrada", 0.2)],
-    "vida_extra": [(659, 659, 0.08, "cuadrada", 0.2), (784, 784, 0.08, "cuadrada", 0.2),
-                   (1319, 1319, 0.08, "cuadrada", 0.2), (1047, 1047, 0.08, "cuadrada", 0.2),
-                   (1175, 1175, 0.08, "cuadrada", 0.2), (1568, 1568, 0.24, "cuadrada", 0.2)],
-    "meta": [(392, 392, 0.1, "cuadrada", 0.2), (523, 523, 0.1, "cuadrada", 0.2),
-             (659, 659, 0.1, "cuadrada", 0.2), (784, 784, 0.1, "cuadrada", 0.2),
-             (1047, 1047, 0.35, "cuadrada", 0.2)],
+    "vida_extra": [(659, 659, 0.09, "cuadrada", 0.3), (784, 784, 0.09, "cuadrada", 0.3),
+                   (1319, 1319, 0.09, "cuadrada", 0.3), (1047, 1047, 0.09, "cuadrada", 0.3),
+                   (1175, 1175, 0.09, "cuadrada", 0.3), (1568, 1568, 0.12, "cuadrada", 0.3),
+                   (2093, 2093, 0.1, "cuadrada", 0.3), (1568, 1568, 0.08, "cuadrada", 0.3),
+                   (2093, 2093, 0.5, "triangular", 0.5)],
+    "meta": [(523, 523, 0.1, "cuadrada", 0.22), (587, 587, 0.1, "cuadrada", 0.22),
+             (659, 659, 0.1, "cuadrada", 0.22), (784, 784, 0.1, "cuadrada", 0.22),
+             (1047, 1047, 0.1, "cuadrada", 0.22), (1319, 1319, 0.1, "cuadrada", 0.22),
+             (1568, 1568, 0.1, "cuadrada", 0.22), (2093, 2093, 0.1, "cuadrada", 0.22),
+             (2093, 2093, 0.5, "triangular", 0.5)],
     "victoria_nivel": [(523, 523, 0.12, "cuadrada", 0.2), (523, 523, 0.12, "cuadrada", 0.2),
                        (523, 523, 0.12, "cuadrada", 0.2), (659, 659, 0.3, "cuadrada", 0.2),
                        (784, 784, 0.4, "cuadrada", 0.2)],
@@ -114,115 +92,76 @@ EFECTOS = {
 }
 
 # ======================================================================
-#  Musica: cada nota es "NOTA:corcheas" (sin :n vale 1 corchea). R = silencio.
+#  Cache en disco: las canciones se sintetizan una vez y se guardan en cache_sonido/
 # ======================================================================
-MUSICAS = {
-    "titulo": {
-        "tempo": 104,
-        "melodia": "C5:2 E5:2 G5:2 E5:2 F5:2 A5:2 G5:4 E5:2 G5:2 C6:2 G5:2 F5:2 D5:2 C5:4",
-        "bajo": "C3:4 G2:4 F2:4 C3:4 C3:4 G2:4 F2:4 G2:4",
-    },
-    "costa": {
-        "tempo": 132,
-        "melodia": "E5 G5 E5 C5 E5 G5 C6:2 D5 F5 D5 B4 D5 F5 B5:2 "
-                   "C5 E5 G5 E5 A5 G5 E5 C5 D5 E5 D5 B4 C5:4",
-        "bajo": "C3:2 G3:2 C3:2 G3:2 G2:2 D3:2 G2:2 D3:2 A2:2 E3:2 F2:2 C3:2 G2:2 D3:2 C3:4",
-        "percusion": True,
-    },
-    "sierra": {
-        "tempo": 116,
-        "melodia": "A4 C5 E5 E5 D5 C5 B4:2 A4 C5 E5 A5 G5 E5 D5:2 "
-                   "C5 D5 E5 E5 D5 C5 B4 A4 G4 A4 B4 C5 A4:4",
-        "bajo": "A2:2 E3:2 A2:2 E3:2 A2:2 E3:2 A2:2 E3:2 F2:2 C3:2 G2:2 D3:2 E2:2 B2:2 A2:4",
-        "percusion": True,
-    },
-    "amazonia": {
-        "tempo": 100,
-        "melodia": "D4:2 F4:2 A4:2 C5:2 A4:3 F4 D4:4 G4:2 A4:2 C5:2 D5:2 C5:3 A4 D5:4",
-        "bajo": "D3:4 A2:4 D3:4 F3:4 G2:4 D3:4 A2:4 D3:4",
-        "percusion": True,
-    },
-    "galapagos": {
-        "tempo": 116,
-        "melodia": "G4 B4 D5 F#5 D5 B4 G4:2 A4 B4 D5 G5 D5 B4 A4:2 "
-                   "B4 D5 F#5 A5 F#5 D5 B4:2 C5 D5 E5 D5 B4:4",
-        "bajo": "G2:4 D3:4 A2:4 E3:4 B2:4 F#3:4 C3:4 D3:4",
-    },
-    "cotopaxi": {
-        "tempo": 150,
-        "melodia": "E4 E4 G4 E4 B4 E4 A4 G4 E4 E4 G4 E4 C5 B4 A4 G4 "
-                   "B4 B4 D5 B4 G5 F#5 E5 D5 C5 B4 A4 G4 B4:4",
-        "bajo": "E2 E2 E3 E2 E2 E2 E3 E2 E2 E2 E3 E2 E2 E2 E3 E2 "
-                "B1 B1 B2 B1 B1 B1 B2 B1 C2 C2 C3 C2 B1:4",
-        "percusion": True,
-    },
-    "victoria": {
-        "tempo": 150,
-        "melodia": "C5 C5 C5 C5:3 G4:2 A4 A4 A4 A4:3 F5:2 G5 F5 E5 D5 C5:4 D5 E5 D5 C5 C5:4",
-        "bajo": "C3:4 C3:4 F2:4 F2:4 C3:4 G2:4 G2:4 C3:4",
-    },
-}
+VERSION_SINTESIS = 2        # subirla si cambia como se genera el sonido (invalida la cache)
+CARPETA_CACHE = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "cache_sonido")
 
 
-def _leer_notas(texto):
-    """'E5 G5:2 R' -> [('E5', 1), ('G5', 2), ('R', 1)]"""
-    notas = []
-    for token in texto.split():
-        if ":" in token:
-            nombre, cantidad = token.split(":")
-            notas.append((nombre, int(cantidad)))
-        else:
-            notas.append((token, 1))
-    return notas
+def _huella(nombre):
+    """Cambia si cambia la cancion o el codigo que la sintetiza: asi nunca se usa una cache vieja."""
+    with open(os.path.join(_RAIZ, "sintesis.py"), "rb") as archivo:
+        codigo = archivo.read()
+    texto = json.dumps([VERSION_SINTESIS, FRECUENCIA, MUSICAS[nombre]], sort_keys=True)
+    return hashlib.md5(texto.encode("utf-8") + codigo).hexdigest()[:10]
 
 
-def _pista(texto, corchea_seg, tipo, volumen, largo):
-    muestras = []
-    for nota, cantidad in _leer_notas(texto):
-        muestras.extend(nota_constante(frecuencia(nota), cantidad * corchea_seg, tipo, volumen))
-    return muestras + [0] * max(0, largo - len(muestras))
-
-
-def crear_cancion(datos):
-    """Mezcla melodia (cuadrada), bajo (triangular) y percusion (ruido) en una lista de muestras."""
-    corchea = 60.0 / datos["tempo"] / 2
-    largo = int(sum(c for _, c in _leer_notas(datos["melodia"])) * corchea * FRECUENCIA)
-    melodia = _pista(datos["melodia"], corchea, "cuadrada", 0.12, largo)
-    bajo = _pista(datos["bajo"], corchea, "triangular", 0.22, largo)
-    mezcla = [a + b for a, b in zip(melodia, bajo)]
-    if datos.get("percusion"):
-        azar = random.Random(3)
-        golpe = int(0.03 * FRECUENCIA)
-        por_corchea = int(corchea * FRECUENCIA)
-        for inicio in range(por_corchea, largo - golpe, por_corchea * 2):
-            for k in range(golpe):
-                mezcla[inicio + k] += int(AMPLITUD_MAX * 0.05 * azar.uniform(-1, 1) * (1 - k / golpe))
-    return mezcla[:largo]
+def cancion_en_cache(nombre):
+    """Bytes (16 bits, mono) de la cancion. Los lee de la cache o los sintetiza y los guarda."""
+    ruta = os.path.join(CARPETA_CACHE, "%s_%s.raw" % (nombre, _huella(nombre)))
+    try:
+        with open(ruta, "rb") as archivo:
+            return archivo.read()
+    except OSError:
+        pass
+    datos = crear_cancion(MUSICAS[nombre]).tobytes()
+    try:
+        os.makedirs(CARPETA_CACHE, exist_ok=True)
+        for viejo in os.listdir(CARPETA_CACHE):
+            if viejo.startswith(nombre + "_"):
+                os.remove(os.path.join(CARPETA_CACHE, viejo))
+        with open(ruta + ".tmp", "wb") as archivo:
+            archivo.write(datos)
+        os.replace(ruta + ".tmp", ruta)
+    except OSError:
+        pass            # sin permiso de escritura: funciona igual, solo sin cache
+    return datos
 
 
 # ======================================================================
 #  Clase Sonido
 # ======================================================================
 class Sonido:
+    hay_audio = True
+
     def __init__(self):
-        pygame.mixer.init(FRECUENCIA, -16, 1, 512)
+        # pygame.init() ya abrio el mezclador con 44100 Hz estereo y un init() posterior se ignora: los
+        # sonidos (22050 Hz mono) se oian 4 veces mas rapidos y 2 octavas mas agudos. Hay que cerrarlo y
+        # abrirlo con el formato exacto. Buffer de 1024: aguanta un cuadro lento sin crujidos.
+        pygame.mixer.quit()
+        pygame.mixer.init(FRECUENCIA, -16, 1, 1024, allowedchanges=0)
         pygame.mixer.set_num_channels(10)
         pygame.mixer.set_reserved(1)
         self.canal_musica = pygame.mixer.Channel(0)
-        self.silenciado = False
+        self.musica_silenciada = False
+        self.efectos_silenciados = False
         self.volumen_efectos = 0.7
         self.volumen_musica = 0.45
         self.efectos = {}
         for nombre, partes in EFECTOS.items():
             muestras = []
             for f0, f1, dur, tipo, vol in partes:
-                muestras.extend(segmento(f0, f1, dur, tipo, vol))
+                muestras.extend(segmento(f0 * FACTOR_TONO, f1 * FACTOR_TONO, dur, tipo, vol))
             self.efectos[nombre] = a_sonido(muestras, self.volumen_efectos)
         self.canciones = {}
         self.actual = None
+        # todo se prepara AHORA (al arrancar), nunca durante el juego. Con la cache en disco esto tarda
+        # unos milisegundos; solo la primera vez hay que sintetizar las canciones.
+        for nombre in MUSICAS:
+            self._cancion(nombre)
 
     def efecto(self, nombre):
-        if self.silenciado:
+        if self.efectos_silenciados:
             return
         sonido = self.efectos.get(nombre)
         if sonido is not None:
@@ -230,7 +169,7 @@ class Sonido:
 
     def _cancion(self, nombre):
         if nombre not in self.canciones:
-            self.canciones[nombre] = a_sonido(crear_cancion(MUSICAS[nombre]), 1.0)
+            self.canciones[nombre] = pygame.mixer.Sound(buffer=cancion_en_cache(nombre))
         return self.canciones[nombre]
 
     def musica(self, nombre):
@@ -240,19 +179,26 @@ class Sonido:
         if self.actual == nombre and self.canal_musica.get_busy():
             return
         self.actual = nombre
-        self.canal_musica.set_volume(0.0 if self.silenciado else self.volumen_musica)
+        self._aplicar_volumen_musica()
         self.canal_musica.play(self._cancion(nombre), loops=-1)
 
     def parar_musica(self):
         self.canal_musica.stop()
         self.actual = None
 
-    def alternar_silencio(self):
-        self.silenciado = not self.silenciado
-        self.canal_musica.set_volume(0.0 if self.silenciado else self.volumen_musica)
-        if self.silenciado:
-            pygame.mixer.stop()
-            # stop() tambien detiene la musica: se reanuda en silencio para poder volver a oirla
-            if self.actual:
-                self.canal_musica.play(self._cancion(self.actual), loops=-1)
-                self.canal_musica.set_volume(0.0)
+    def _aplicar_volumen_musica(self):
+        self.canal_musica.set_volume(0.0 if self.musica_silenciada else self.volumen_musica)
+
+    def alternar_musica(self):
+        """Silencia o activa solo la musica (la cancion sigue corriendo en silencio y vuelve a tiempo)."""
+        self.musica_silenciada = not self.musica_silenciada
+        self._aplicar_volumen_musica()
+        return not self.musica_silenciada
+
+    def alternar_efectos(self):
+        """Silencia o activa solo los efectos de sonido."""
+        self.efectos_silenciados = not self.efectos_silenciados
+        if self.efectos_silenciados:
+            for canal in range(1, pygame.mixer.get_num_channels()):
+                pygame.mixer.Channel(canal).stop()
+        return not self.efectos_silenciados

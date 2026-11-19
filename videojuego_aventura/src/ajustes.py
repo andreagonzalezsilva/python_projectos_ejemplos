@@ -7,32 +7,34 @@ Todo lo que se pueda querer cambiar (velocidades, nombres, colores) vive aqui.
 ANCHO = 320            # ancho del lienzo interno (px)
 ALTO = 180             # alto del lienzo interno (px)
 ESCALA = 4             # la ventana mide 1280x720
-FPS = 60
+FPS = 60               # si no se detecta el monitor
+FPS_MAXIMO = 165       # el juego corre a la frecuencia del monitor, hasta este tope
 DT_MAXIMO = 1 / 30     # limite del paso de tiempo para evitar saltos
 BALDOSA = 16           # tamano de una baldosa (px)
 FILAS_NIVEL = 11       # altura del nivel en baldosas (176 px)
 
 # ---------------------------------------------------------------- fisica del jugador
 GRAVEDAD = 900
+GRAVEDAD_JUGADOR = 1300   # el jugador cae mas rapido que lo demas: salto alto pero con el mismo tiempo en el aire
 VEL_CAMINAR = 90
 VEL_CORRER = 140
 ACEL_SUELO = 600
 FRENO_SUELO = 700
 CONTROL_AIRE = 0.6
-VEL_SALTO = -300
+VEL_SALTO = -430       # sube ~71 px (4,4 baldosas): alcanza la parte de arriba de los bloques
 CORTE_SALTO = 0.5
 VEL_CAIDA_MAX = 400
 TIEMPO_COYOTE = 0.08
 TIEMPO_BUFFER = 0.10
 HITBOX_PEQUENO = (12, 16)
 HITBOX_GRANDE = (12, 30)
-REBOTE_PISOTON = -200
+REBOTE_PISOTON = -240
 TIEMPO_INVULNERABLE = 2.0
 
 # ---------------------------------------------------------------- reglas
 VIDAS_INICIALES = 3
 TIEMPO_NIVEL = 240
-TIEMPO_JEFE = 180
+TIEMPO_JEFE = 100
 PUNTOS_ENEMIGO = 100
 PUNTOS_COLECCIONABLE = 10
 PUNTOS_COMIDA_GRANDE = 1000
@@ -53,9 +55,11 @@ VEL_IGUANA = 20
 TIEMPO_ATURDIDA = 3.0
 
 # ---------------------------------------------------------------- jefe
-JEFE_CALMA = 4.0
-JEFE_AVISO = 1.5
-JEFE_ERUPCION = 3.0
+JEFE_CALMA = 1.6          # casi no hay descanso entre erupciones
+JEFE_AVISO = 0.7
+JEFE_ERUPCION = 6.0
+JEFE_INTERVALO = 0.14     # segundos entre disparos de ceniza (cada sello lo acelera)
+JEFE_VEL_LAVA = 120       # bolas de lava que ruedan por el suelo y hay que saltar
 
 # ---------------------------------------------------------------- colores
 COLORES = {

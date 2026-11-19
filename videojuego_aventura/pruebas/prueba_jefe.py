@@ -56,7 +56,7 @@ def main():
     v.comprobar(not nivel.bandera.visible, "la bandera esta oculta al empezar")
     v.comprobar(jefe.vida == 3, "la barra de vida tiene 3 segmentos")
 
-    # ---- ciclo: calma 4 s -> aviso 1.5 s -> erupcion 3 s
+    # ---- ciclo: calma 1,6 s -> aviso 0,7 s -> erupcion 6 s
     nivel = nuevo()
     j = nivel.jugador
     j.invulnerable = 999
@@ -65,15 +65,15 @@ def main():
     def espiar(n, c):
         if not fases or fases[-1][0] != n.jefe.fase:
             fases.append((n.jefe.fase, nivel.reloj))
-    simular(nivel, [(10.0, "")], espiar)
+    simular(nivel, [(12.0, "")], espiar)
     nombres = [f[0] for f in fases]
     v.comprobar(nombres[:4] == ["calma", "aviso", "erupcion", "calma"], "ciclo calma -> aviso -> erupcion -> calma",
                 str(nombres[:4]))
     t_calma = fases[1][1] if len(fases) > 1 else 0        # la calma empezo en t=0
     t_aviso = fases[2][1] - fases[1][1] if len(fases) > 2 else 0
     t_erup = fases[3][1] - fases[2][1] if len(fases) > 3 else 0
-    v.comprobar(abs(t_calma - 4.0) < 0.3 and abs(t_aviso - 1.5) < 0.3 and abs(t_erup - 3.0) < 0.3,
-                "duraciones 4 s / 1,5 s / 3 s", "(%.1f, %.1f, %.1f)" % (t_calma, t_aviso, t_erup))
+    v.comprobar(abs(t_calma - 1.6) < 0.3 and abs(t_aviso - 0.7) < 0.3 and abs(t_erup - 6.0) < 0.3,
+                "duraciones 1,6 s / 0,7 s / 6 s", "(%.1f, %.1f, %.1f)" % (t_calma, t_aviso, t_erup))
 
     # ---- aviso: sombras y temblor; erupcion: cae ceniza que daña
     nivel = nuevo()
@@ -109,8 +109,8 @@ def main():
         if i < 2:
             v.comprobar(nivel.jefe.vida == 3 - (i + 1) and not nivel.jefe.derrotado,
                         "sello %d activado: la barra baja a %d" % (i + 1, 3 - (i + 1)))
-    v.comprobar(duraciones[0] < 3.0 and duraciones[1] < duraciones[0], "cada sello acorta la siguiente erupcion",
-                str([3.0] + duraciones))
+    v.comprobar(duraciones[0] > 6.0 and duraciones[1] > duraciones[0], "cada sello enfurece al volcan: erupcion mas larga",
+                str([6.0] + duraciones))
     jefe = nivel.jefe
     v.comprobar(jefe.derrotado and jefe.vida == 0, "con los 3 sellos el volcan se calma")
     simular(nivel, [(12.0, "")])

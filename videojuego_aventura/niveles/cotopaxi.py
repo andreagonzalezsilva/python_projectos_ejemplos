@@ -7,7 +7,7 @@ Leyenda: # suelo  = plataforma  B ladrillo  ? bloque especial  C coleccionable
 NIVEL_COTOPAXI = {
     "clave": "cotopaxi",
     "nombre": "nivel_cotopaxi",
-    "tiempo": 180,
+    "tiempo": 100,
     "jefe": True,
     "paleta": {"cielo_arriba": "#3B1A2A", "cielo_abajo": "#C4452B", "suelo": "#2E2A33", "nieve": "#E8EEF5", "lava": "#FF8A1F", "hielo": "#9FE3FF"},
     "fondo": ["cielo_ceniza", "montanas", "humo_lava"],

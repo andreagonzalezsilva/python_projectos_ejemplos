@@ -14,20 +14,29 @@ from ajustes import BALDOSA, color
 class Proyectil:
     """Bola de ceniza o roca que cae desde arriba."""
 
-    def __init__(self, x, tipo, suelo_y):
+    def __init__(self, x, tipo, suelo_y, vx=0.0):
         self.x = x
-        self.y = -16.0
-        self.vy = 40.0
+        self.vx = vx            # distinto de 0: bola de lava que rueda por el suelo
+        self.y = (suelo_y - 6) if vx else -16.0
+        self.vy = 0.0 if vx else 120.0
         self.tipo = tipo
         self.suelo_y = suelo_y
         self.vivo = True
 
     @property
     def rect(self):
-        return pygame.Rect(int(self.x) - 6, int(self.y) - 6, 12, 12)
+        if self.vx:
+            return pygame.Rect(int(self.x) - 7, int(self.y) - 5, 14, 11)
+        lado = 16 if self.tipo == "roca" else 13
+        return pygame.Rect(int(self.x) - lado // 2, int(self.y) - lado // 2, lado, lado)
 
-    def actualizar(self, dt):
-        self.vy = min(self.vy + 320 * dt, 230)
+    def actualizar(self, dt, ancho_nivel=0):
+        if self.vx:
+            self.x += self.vx * dt
+            if self.x < -40 or self.x > ancho_nivel + 40:
+                self.vivo = False
+            return
+        self.vy = min(self.vy + 700 * dt, 340)
         self.y += self.vy * dt
         if self.y + 6 >= self.suelo_y:
             self.vivo = False
@@ -53,8 +62,16 @@ class Jefe:
 
     @property
     def duracion_erupcion(self):
-        """Cada sello activado acorta la siguiente erupcion."""
-        return max(1.0, ajustes.JEFE_ERUPCION * (1 - 0.25 * self.sellos_activos))
+        """Cada sello activado enfurece al volcan: la erupcion dura mas."""
+        return ajustes.JEFE_ERUPCION + 1.5 * self.sellos_activos
+
+    @property
+    def duracion_calma(self):
+        return max(0.8, ajustes.JEFE_CALMA - 0.35 * self.sellos_activos)
+
+    @property
+    def intervalo_disparo(self):
+        return max(0.07, ajustes.JEFE_INTERVALO - 0.025 * self.sellos_activos)
 
     # ------------------------------------------------------------ ciclo
     def reiniciar_ciclo(self):
@@ -63,6 +80,8 @@ class Jefe:
         self.proyectiles = []
         self.avisos = []
         self.t_disparo = 0.0
+        self.t_lava = 0.0
+        self.lado_lava = self.azar.random() < 0.5
         self.indice_aviso = 0
         self.nivel.camara.temblor = 0
 
@@ -87,10 +106,10 @@ class Jefe:
 
     def _elegir_avisos(self):
         j = self.nivel.jugador
-        cantidad = 6
+        cantidad = 10
         xs = []
         for i in range(cantidad):
-            base = j.x + (i - cantidad / 2) * 34 + self.azar.uniform(-10, 10)
+            base = j.x + (i - cantidad / 2) * 26 + self.azar.uniform(-8, 8)
             xs.append(max(12, min(self.nivel.ancho_px - 12, base)))
         self.azar.shuffle(xs)
         # siempre cae una justo sobre el jugador
@@ -104,7 +123,7 @@ class Jefe:
         camara = self.nivel.camara
         if self.fase == self.CALMA:
             camara.temblor = 0
-            if self.t_fase >= ajustes.JEFE_CALMA:
+            if self.t_fase >= self.duracion_calma:
                 self.fase = self.AVISO
                 self.t_fase = 0.0
                 self.avisos = self._elegir_avisos()
@@ -115,16 +134,33 @@ class Jefe:
                 self.fase = self.ERUPCION
                 self.t_fase = 0.0
                 self.t_disparo = 0.0
+                self.t_lava = 0.4
                 self.indice_aviso = 0
         else:
             camara.temblor = 2
             self.t_disparo -= dt
+            self.t_lava -= dt
+            j = self.nivel.jugador
             if self.t_disparo <= 0 and self.avisos:
-                x = self.avisos[self.indice_aviso % len(self.avisos)]
+                # la mitad de los disparos apunta (sin aviso) a donde estara el jugador
+                if self.indice_aviso % 2 == 1:
+                    x = j.x + j.w / 2 + j.vx * 0.5 + self.azar.uniform(-8, 8)
+                    x = max(8, min(self.nivel.ancho_px - 8, x))
+                else:
+                    x = self.avisos[(self.indice_aviso // 2) % len(self.avisos)]
                 tipo = "roca" if self.indice_aviso % 3 == 2 else "ceniza"
                 self.proyectiles.append(Proyectil(x, tipo, self.suelo_y))
                 self.indice_aviso += 1
-                self.t_disparo = 0.32
+                self.t_disparo = self.intervalo_disparo
+            if self.t_lava <= 0:
+                # bola de lava que rueda desde un borde: hay que saltarla o subir a una plataforma
+                desde_izquierda = self.lado_lava
+                borde = self.nivel.camara.x
+                x0 = borde - 8 if desde_izquierda else borde + ajustes.ANCHO + 8
+                vel = ajustes.JEFE_VEL_LAVA * (1 if desde_izquierda else -1)
+                self.proyectiles.append(Proyectil(x0, "roca", self.suelo_y, vx=vel))
+                self.lado_lava = not self.lado_lava
+                self.t_lava = 1.5
             if self.t_fase >= self.duracion_erupcion:
                 self.fase = self.CALMA
                 self.t_fase = 0.0
@@ -132,7 +168,7 @@ class Jefe:
                 camara.temblor = 0
         j = self.nivel.jugador
         for p in self.proyectiles:
-            p.actualizar(dt)
+            p.actualizar(dt, self.nivel.ancho_px)
             if p.vivo and not j.muriendo and p.rect.colliderect(j.rect):
                 p.vivo = False
                 self.nivel.danar_jugador()

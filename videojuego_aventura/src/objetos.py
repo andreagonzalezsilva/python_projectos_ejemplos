@@ -38,8 +38,16 @@ class Particulas:
         for dx, dy in ((-4, -4), (4, -4), (-4, 4), (4, 4)):
             self.fragmentos_ladrillo.append([x + dx, y + dy, dx * 14, -140 + dy * 8, 1.2])
 
-    def texto(self, x, y, cadena):
-        self.textos.append([x, y, str(cadena), 0.8])
+    def texto(self, x, y, cadena, c="#FFFFFF", vida=0.8):
+        self.textos.append([x, y, str(cadena), vida, c])
+
+    def anillo(self, x, y, colores=("#5BE35B", "#F6C915", "#FFFFFF")):
+        """Estallido de chispas en circulo (para la vida extra)."""
+        for i in range(24):
+            ang = math.tau * i / 24
+            vel = 50 + (i % 3) * 18
+            self.lista.append([x, y, math.cos(ang) * vel, math.sin(ang) * vel - 20, 0.7, 0.7,
+                               color(colores[i % len(colores)]), 2, 60])
 
     def icono(self, x, y, superficie):
         self.iconos.append([x, y, superficie, 0.45])
@@ -73,8 +81,8 @@ class Particulas:
             lienzo.blit(superficie, (int(x) - 6 - cam_x, int(y) - 6 + oy))
         for x, y, vx, vy, vida in self.fragmentos_ladrillo:
             lienzo.blit(sprites.CACHE["fragmento"], (int(x) - 2 - cam_x, int(y) - 2 + oy))
-        for x, y, cadena, vida in self.textos:
-            interfaz.texto(lienzo, cadena, (int(x) - cam_x, int(y) + oy), "#FFFFFF", tam=8, centrado=True)
+        for x, y, cadena, vida, c in self.textos:
+            interfaz.texto(lienzo, cadena, (int(x) - cam_x, int(y) + oy), c, tam=8, centrado=True)
 
 
 # ======================================================================
@@ -210,15 +218,22 @@ class Checkpoint:
 
 
 class Bandera:
-    """Bandera de Ecuador: la meta. El mastil mide 6 baldosas de alto."""
+    """Bandera de Ecuador: la meta. El mastil mide 6 baldosas de alto.
+
+    Antes de tocarla la tela esta abajo; al llegar el jugador la tela sube hasta la punta."""
     ALTO = 96
     EXTRA = 32          # zona invisible sobre el mastil: no se puede saltar por encima
+    TIEMPO_IZAR = 1.3
+    Y_ABAJO = 80        # y de la tela (dentro del sprite del mastil) cuando esta abajo
+    Y_ARRIBA = 6        # y de la tela cuando esta arriba
 
     def __init__(self, col, fila):
         self.col = col
         self.fila = fila
         self.tocada = False
         self.visible = True
+        self.t_izar = 0.0
+        self.terminada = False      # True en cuanto la tela llega a la punta
 
     @property
     def rect(self):
@@ -229,11 +244,36 @@ class Bandera:
     def x_mastil(self):
         return self.col * BALDOSA + 5
 
+    @property
+    def progreso(self):
+        """0 = tela abajo, 1 = tela arriba (sube rapido al principio y frena al llegar)."""
+        if not self.tocada:
+            return 0.0
+        t = min(1.0, self.t_izar / self.TIEMPO_IZAR)
+        return 1 - (1 - t) ** 2
+
+    def actualizar(self, dt):
+        """Devuelve True en el cuadro en que la tela llega a la punta."""
+        if self.tocada and not self.terminada:
+            self.t_izar += dt
+            if self.t_izar >= self.TIEMPO_IZAR:
+                self.terminada = True
+                return True
+        return False
+
     def dibujar(self, lienzo, cam_x, oy, tiempo):
         if not self.visible:
             return
-        imagen = sprites.CACHE["bandera_meta"][int(tiempo * 5) % 4]
-        lienzo.blit(imagen, (self.col * BALDOSA - cam_x, (self.fila + 1) * BALDOSA - self.ALTO + oy))
+        x = self.col * BALDOSA - cam_x
+        y = (self.fila + 1) * BALDOSA - self.ALTO + oy
+        lienzo.blit(sprites.CACHE["bandera_mastil"], (x, y))
+        subida = self.Y_ABAJO + (self.Y_ARRIBA - self.Y_ABAJO) * self.progreso
+        tela = sprites.CACHE["bandera_tela"][int(tiempo * 5) % 4]
+        lienzo.blit(tela, (x + 6, y + int(round(subida))))
+        if self.tocada and not self.terminada:
+            # lineas de movimiento bajo la tela mientras sube
+            for k in range(1, 4):
+                lienzo.fill(color("#FFFFFF"), (x + 9 + k * 2, y + int(round(subida)) + 12 + k * 3, 1, 2))
 
 
 class Sello:

@@ -1,4 +1,5 @@
 """Motor: ventana, lienzo interno 320x180, bucle a 60 FPS, escenas y pantalla completa (F11)."""
+import gc
 import time
 
 import pygame
@@ -55,6 +56,7 @@ class Motor:
         fondos.reiniciar()
         sprites.iniciar()
         fondos.generar_todos()
+        interfaz.precalentar(self._rect_destino().w / ajustes.ANCHO)
         self.segundos_arte = time.perf_counter() - inicio_arte
         self.reloj = pygame.time.Clock()
         self.entrada = EntradaTeclado()
@@ -79,6 +81,10 @@ class Motor:
         if self.sonido is None:
             import sonido_nulo
             self.sonido = sonido_nulo.SonidoNulo()
+        # todo el material de larga vida ya existe: se saca del recolector de basura para que
+        # sus pausas no se noten durante el juego
+        gc.collect()
+        gc.freeze()
 
     @staticmethod
     def _validar(datos):
@@ -180,7 +186,9 @@ class Motor:
                 if evento.key == pygame.K_F11:
                     self.alternar_pantalla_completa()
                 elif evento.key == pygame.K_m:
-                    self.sonido.alternar_silencio()
+                    self.sonido.alternar_musica()
+                elif evento.key == pygame.K_n:
+                    self.sonido.alternar_efectos()
             self.entrada.procesar_evento(evento)
         self.entrada.actualizar(dt)
         if self.escena is not None:
@@ -192,19 +200,49 @@ class Motor:
                 self.escena.dibujar(self.lienzo)
         self.cuadros += 1
 
+    @staticmethod
+    def frecuencia_pantalla():
+        """Hz del monitor (Windows). Si no se puede saber, ajustes.FPS."""
+        try:
+            import ctypes
+            usuario, grafico = ctypes.windll.user32, ctypes.windll.gdi32
+            contexto = usuario.GetDC(0)
+            hz = grafico.GetDeviceCaps(contexto, 116)       # VREFRESH
+            usuario.ReleaseDC(0, contexto)
+            if 59 <= hz <= 360:
+                return int(hz)
+        except Exception:  # noqa: BLE001
+            pass
+        return ajustes.FPS
+
     def ejecutar(self, max_cuadros=None):
-        """Bucle principal a 60 FPS. Con max_cuadros se detiene solo (pruebas)."""
-        acumulado = 0.0
+        """Bucle principal. Corre a la frecuencia del monitor (con 60 FPS en un monitor de 165 Hz la
+        imagen va a tirones) y con un temporizador preciso: Clock.tick usa milisegundos enteros, asi que
+        el dt alternaba entre 16 y 17 ms y el movimiento no era parejo."""
+        fps = min(self.frecuencia_pantalla(), ajustes.FPS_MAXIMO)
+        objetivo = 1.0 / fps
+        espera_fina = 0.0015            # lo ultimo se espera dando vueltas: sleep() se pasa por poco
+        ultimo = siguiente = time.perf_counter()
+        inicio_medida = ultimo
         contados = 0
         while self.corriendo:
-            dt = min(self.reloj.tick(ajustes.FPS) / 1000.0, ajustes.DT_MAXIMO)
+            resto = siguiente - time.perf_counter()
+            if resto > espera_fina:
+                time.sleep(resto - espera_fina)
+            while time.perf_counter() < siguiente:
+                pass
+            ahora = time.perf_counter()
+            dt = min(ahora - ultimo, ajustes.DT_MAXIMO)
+            ultimo = ahora
+            siguiente += objetivo
+            if siguiente < ahora - objetivo:        # nos atrasamos mucho: no intentar recuperar
+                siguiente = ahora + objetivo
             self.paso(dt)
             self.presentar()
-            acumulado += dt
             contados += 1
-            if acumulado >= 1.0:
-                self.fps_medido = contados / acumulado
-                acumulado = 0.0
+            if ahora - inicio_medida >= 1.0:
+                self.fps_medido = contados / (ahora - inicio_medida)
+                inicio_medida = ahora
                 contados = 0
             if max_cuadros is not None and self.cuadros >= max_cuadros:
                 break

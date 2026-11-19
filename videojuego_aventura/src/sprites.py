@@ -175,6 +175,49 @@ _PIERNAS = {
     ],
 }
 
+# variantes del salto y la caida: otra posicion de las piernas para cada cuadro
+_PIERNAS["salto_a"] = _PIERNAS["salto"]
+_PIERNAS["salto_b"] = [
+    f(4, "oppppppo"),
+    f(3, "oppo" + "..." + "oppo"),
+    f(2, "ozzzzo" + "...." + "ozzo"),
+    f(0, ""),
+]
+_PIERNAS["caida_a"] = _PIERNAS["caida"]
+_PIERNAS["caida_b"] = [
+    f(4, "oppppppo"),
+    f(2, "oppo" + "...." + "oppo"),
+    f(2, "ozzo" + "...." + "ozzo"),
+    f(0, ""),
+]
+
+# Brazos: cada fila lista las columnas 0-4 (la mitad derecha es el espejo). '.' = no tocar.
+# salto: brazos arriba (cuadro a y b se alternan, como celebrando); caida: brazos abiertos que aletean.
+_BRAZOS = {
+    "salto_a": {0: ".oooo", 1: ".osso", 2: ".osso", 3: ".osso", 4: ".osso", 5: ".osso", 6: ".osso",
+                7: ".osso", 8: ".osss"},
+    "salto_b": {0: "ooo..", 1: "osso.", 2: "osso.", 3: ".osso", 4: ".osso", 5: ".osso", 6: ".osso",
+                7: ".osso", 8: ".osss"},
+    "caida_a": {5: "oooo.", 6: "osss.", 7: "ossso", 8: "ooo.."},
+    "caida_b": {3: "oooo.", 4: "osss.", 5: "ossso", 6: "ooo.."},
+}
+_TORSO_ESTRECHO = {"salto_a", "salto_b"}      # con los brazos arriba el torso se ve mas angosto
+
+
+def _con_brazos(filas, cuadro):
+    for n, parte in _BRAZOS.get(cuadro, {}).items():
+        fila = list(filas[n])
+        for i, letra in enumerate(parte):
+            if letra != ".":
+                fila[i] = letra
+                fila[15 - i] = letra
+        filas[n] = "".join(fila)
+    if cuadro in _TORSO_ESTRECHO:
+        filas[9] = f(4, "o" + "c" * 6 + "o")
+        filas[10] = f(4, "o" + "C" * 6 + "o")
+    return filas
+
+
 _PEINADOS = {
     "corto": [
         f(0, ""),
@@ -333,7 +376,7 @@ def _capa_cuerpo(piel_hex, cuadro):
         "p": color(ajustes.ROPA["pantalon"]), "P": sombrear(color(ajustes.ROPA["pantalon"]), 0.8),
         "z": color(ajustes.ROPA["zapatos"]),
     }
-    filas = _cabeza_torso()
+    filas = _con_brazos(_cabeza_torso(), cuadro)
     filas = filas + _PIERNAS[cuadro]
     return capa_exacta(filas, paleta)
 
@@ -344,8 +387,8 @@ _ESTIRAR_GRANDE = {9: 7, 13: 9}
 _CUADROS = {
     "quieto": ["quieto"],
     "caminar": ["paso_a", "paso_b", "paso_c", "paso_b"],
-    "saltar": ["salto"],
-    "caer": ["caida"],
+    "saltar": ["salto_a", "salto_b"],
+    "caer": ["caida_a", "caida_b"],
 }
 
 
@@ -827,6 +870,14 @@ def _generar_banderas():
         s.blit(bandera_ecuador(10, 8, cuadro), (6, 6))
         cuadros.append(s.convert_alpha())
     CACHE["bandera_meta"] = cuadros
+    # la meta animada: el mastil solo y la tela aparte (la tela sube por el mastil)
+    mastil = pygame.Surface((16, alto), pygame.SRCALPHA)
+    pygame.draw.rect(mastil, color("#14121C"), (3, 4, 4, alto - 4))
+    pygame.draw.rect(mastil, color("#D8D8E4"), (4, 4, 2, alto - 4))
+    pygame.draw.circle(mastil, color("#14121C"), (5, 3), 3)
+    pygame.draw.circle(mastil, color("#F6C915"), (5, 3), 2)
+    CACHE["bandera_mastil"] = mastil.convert_alpha()
+    CACHE["bandera_tela"] = [bandera_ecuador(10, 8, cuadro) for cuadro in range(4)]
     # checkpoint: banderita pequena (apagada = blanca, activa = tricolor)
     apagada = pygame.Surface((16, 16), pygame.SRCALPHA)
     pygame.draw.rect(apagada, color("#14121C"), (4, 1, 3, 15))

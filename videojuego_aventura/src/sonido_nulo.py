@@ -2,7 +2,9 @@
 
 
 class SonidoNulo:
-    silenciado = True
+    hay_audio = False
+    musica_silenciada = True
+    efectos_silenciados = True
 
     def efecto(self, nombre):
         pass
@@ -13,5 +15,8 @@ class SonidoNulo:
     def parar_musica(self):
         pass
 
-    def alternar_silencio(self):
-        pass
+    def alternar_musica(self):
+        return False
+
+    def alternar_efectos(self):
+        return False

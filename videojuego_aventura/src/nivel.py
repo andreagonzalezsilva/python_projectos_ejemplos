@@ -129,6 +129,7 @@ class Nivel:
         self.estado = "jugando"        # jugando | muerto | meta | completo | game_over
         self.t_estado = 0.0
         self.eventos = []              # mensajes para la escena: "muerte", "nivel_completo", "game_over"...
+        self.t_vida = 0.0              # segundos que queda el aviso de "vida extra"
         self.jefe = None
         if datos.get("jefe"):
             import jefe
@@ -206,15 +207,22 @@ class Nivel:
         if x is not None:
             self.particulas.texto(x, y, cantidad)
 
+    def ganar_vida(self):
+        """Vida extra: sonido propio, estallido de chispas sobre el jugador, aviso grande y contador del HUD."""
+        j = self.jugador
+        self.sesion.vidas += 1
+        self.t_vida = 2.2
+        self.sonido.efecto("vida_extra")
+        centro_x, centro_y = j.x + j.w / 2, j.y + j.h / 2
+        self.particulas.anillo(centro_x, centro_y)
+        self.particulas.texto(centro_x, j.y - 12, "1UP", "#5BE35B", vida=1.6)
+
     def sumar_coleccionable(self, x=None, y=None):
         self.sesion.puntaje += ajustes.PUNTOS_COLECCIONABLE
         self.sesion.coleccionables += 1
         if self.sesion.coleccionables >= ajustes.COLECCIONABLES_VIDA:
             self.sesion.coleccionables = 0
-            self.sesion.vidas += 1
-            self.sonido.efecto("vida_extra")
-            if x is not None:
-                self.particulas.texto(x, y - 8, "1UP")
+            self.ganar_vida()
         else:
             self.sonido.efecto("coleccionable")
 
@@ -291,12 +299,11 @@ class Nivel:
     def _comer(self, comida):
         j = self.jugador
         comida.viva = False
-        self.sonido.efecto("comida")
         self.particulas.chispas(comida.x + 6, comida.y + 6, "#FFFFFF")
+        if comida.clave != "colada_morada":
+            self.sonido.efecto("comida")
         if comida.clave == "colada_morada":
-            self.sesion.vidas += 1
-            self.sonido.efecto("vida_extra")
-            self.particulas.texto(j.x + j.w / 2, j.y - 6, "1UP")
+            self.ganar_vida()
             if not j.grande:
                 j.crecer()
             return
@@ -313,7 +320,13 @@ class Nivel:
     # ------------------------------------------------------------ actualizacion
     def actualizar(self, dt, entrada):
         self.reloj += dt
+        self.t_vida = max(0.0, self.t_vida - dt)
         self.particulas.actualizar(dt)
+        if self.bandera and self.bandera.actualizar(dt):
+            b = self.bandera
+            punta = ((b.x_mastil + 5), (b.fila + 1) * BALDOSA - b.ALTO + 10)
+            self.particulas.chispas(*punta, "#F6C915")
+            self.particulas.chispas(*punta, "#FFFFFF")
         for bloque in self.bloques.values():
             bloque.actualizar(dt)
         j = self.jugador

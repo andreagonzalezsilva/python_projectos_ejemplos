@@ -17,6 +17,7 @@ from ajustes import color
 _FUENTES = {}       # fuentes pequenas, sin suavizado (solo para el modo sin capa)
 _FUENTES_HR = {}    # fuentes de alta resolucion
 _GRANDES = {}
+_TEXTOS = {}        # textos ya dibujados: (cadena, tam, color...) -> (superficie, tamano, sombra)
 _PREFERIDAS = ["trebuchetms", "consolas", "dejavusansmono", "lucidaconsole", "arial"]
 _CAPA = {"lienzo": None, "capa": None, "rects": []}
 
@@ -59,6 +60,7 @@ def reiniciar_fuentes():
     _FUENTES.clear()
     _FUENTES_HR.clear()
     _GRANDES.clear()
+    _TEXTOS.clear()
 
 
 def _buscar_fuente(tam, negrita=False, preferidas=None):
@@ -95,6 +97,37 @@ def ancho_texto(lienzo, cadena, tam=9, negrita=False):
     return fuente_hr(tam, k, negrita).size(str(cadena))[0] / k
 
 
+def _texto_dibujado(cadena, tam, negrita, color_texto, sombra, k):
+    """Dibuja (una sola vez) el texto con su sombra y lo guarda: renderizar fuentes cada cuadro es lo mas caro."""
+    clave = (cadena, tam, negrita, color_texto, sombra, int(round(k * 100)))
+    hecho = _TEXTOS.get(clave)
+    if hecho is None:
+        if len(_TEXTOS) > 500:
+            _TEXTOS.clear()
+        f = fuente_hr(tam, k, negrita)
+        base = f.render(cadena, True, color_texto)
+        desplazo = max(1, int(round(k * 0.5)))
+        if sombra:
+            imagen = pygame.Surface((base.get_width() + desplazo, base.get_height() + desplazo), pygame.SRCALPHA)
+            imagen.blit(f.render(cadena, True, color(ajustes.COLORES["sombra"])), (desplazo, desplazo))
+            imagen.blit(base, (0, 0))
+        else:
+            imagen = base
+        hecho = (imagen, base.get_size(), desplazo)
+        _TEXTOS[clave] = hecho
+    return hecho
+
+
+def precalentar(k):
+    """Carga las fuentes y sus letras al arrancar, para que el primer texto de cada tamano no frene el juego."""
+    letras = "".join(chr(c) for c in range(32, 127)) + "\u00e1\u00e9\u00ed\u00f3\u00fa\u00f1\u00c1\u00c9\u00cd\u00d3\u00da\u00d1\u00a1\u00bf\u00fc\u2013"
+    for tam in (8, 9, 12):
+        for negrita in (False, True):
+            fuente_hr(tam, k, negrita).render(letras, True, (255, 255, 255))
+    for escala in (1, 2, 3):
+        fuente_hr(8 * escala, k, titulo=True).render(letras, True, (255, 255, 255))
+
+
 def texto(lienzo, cadena, pos, color_texto="#FFFFFF", tam=9, centrado=False, derecha=False,
           sombra=True, negrita=False):
     """Dibuja texto. pos (en pixeles del lienzo) es la esquina superior izquierda (o el centro/derecha)."""
@@ -104,21 +137,16 @@ def texto(lienzo, cadena, pos, color_texto="#FFFFFF", tam=9, centrado=False, der
     k = _escala(lienzo)
     if k is None:
         return _texto_pixelado(lienzo, cadena, pos, color_texto, tam, centrado, derecha, sombra, negrita)
-    f = fuente_hr(tam, k, negrita)
-    base = f.render(cadena, True, color_texto)
-    ancho, alto = base.get_width() / k, base.get_height() / k
+    imagen, (ancho_px, alto_px), desplazo = _texto_dibujado(cadena, tam, negrita, color_texto, sombra, k)
+    ancho, alto = ancho_px / k, alto_px / k
     x, y = pos
     if centrado:
         x -= ancho / 2
     elif derecha:
         x -= ancho
     px, py = int(round(x * k)), int(round(y * k))
-    capa = _CAPA["capa"]
-    desplazo = max(1, int(round(k * 0.5)))
-    if sombra:
-        capa.blit(f.render(cadena, True, color(ajustes.COLORES["sombra"])), (px + desplazo, py + desplazo))
-    capa.blit(base, (px, py))
-    _CAPA["rects"].append(pygame.Rect(px, py, base.get_width() + desplazo, base.get_height() + desplazo))
+    _CAPA["capa"].blit(imagen, (px, py))
+    _CAPA["rects"].append(pygame.Rect(px, py, ancho_px + desplazo, alto_px + desplazo))
     return pygame.Rect(x, y, ancho, alto)
 
 
@@ -400,12 +428,23 @@ def _franja():
     return _FRANJA["hud"]
 
 
-def hud(lienzo, nivel, personaje, accesorio):
+def hud(lienzo, nivel, personaje, accesorio, sonido=None):
     """Vidas, puntaje, coleccionables, tiempo y nombre del nivel."""
     sesion = nivel.sesion
+    if sonido is not None and sonido.hay_audio and sonido.musica_silenciada:
+        texto(lienzo, "M: %s OFF" % textos.t("musica"), (ajustes.ANCHO - 4, 16), derecha=True, tam=8,
+              color_texto="#DDE6FF")
     lienzo.blit(_franja(), (0, 0))
     lienzo.blit(sprites.cabeza(personaje, accesorio), (2, 1))
-    texto(lienzo, "x%d" % max(0, sesion.vidas), (20, 2), tam=8)
+    if nivel.t_vida > 0:
+        # vida extra: el contador parpadea en verde y el HUD se ilumina
+        brillo = int(nivel.t_vida * 8) % 2 == 0
+        velo = pygame.Surface((42, 14), pygame.SRCALPHA)
+        velo.fill((60, 200, 60, 150) if brillo else (246, 201, 21, 150))
+        lienzo.blit(velo, (0, 0))
+        texto(lienzo, "x%d +1" % max(0, sesion.vidas), (20, 2), tam=8, color_texto="#5BE35B" if brillo else "#F6C915")
+    else:
+        texto(lienzo, "x%d" % max(0, sesion.vidas), (20, 2), tam=8)
     texto(lienzo, "%s %06d" % (textos.t("puntaje"), sesion.puntaje), (44, 2), tam=8)
     clave = nivel.datos.get("coleccionable", "banano")
     if not isinstance(clave, str):
@@ -417,3 +456,8 @@ def hud(lienzo, nivel, personaje, accesorio):
     texto(lienzo, "%s %03d" % (textos.t("tiempo"), segundos), (172, 2), color_texto=color_tiempo, tam=8)
     texto(lienzo, textos.t(nivel.datos["nombre"]), (ajustes.ANCHO - 4, 2), derecha=True, tam=8,
           color_texto=ajustes.COLORES["amarillo"])
+    if nivel.t_vida > 0:
+        verde = "#7DFF7D" if int(nivel.t_vida * 6) % 2 == 0 else "#F6C915"
+        panel(lienzo, pygame.Rect(ajustes.ANCHO // 2 - 56, 22, 112, 16), alfa=150)
+        texto(lienzo, textos.t("vida_extra"), (ajustes.ANCHO // 2, 24), color_texto=verde, tam=12, centrado=True,
+              negrita=True)

@@ -21,3 +21,6 @@ staticfiles/
 # IDE
 .idea/
 .vscode/
+
+# Cache de sonido generado
+cache_sonido/

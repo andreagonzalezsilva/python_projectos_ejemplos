@@ -59,7 +59,7 @@ def main():
     corto = altura_salto(0.05)
     largo = altura_salto(0.7)
     v.comprobar(1.0 <= corto <= 2.0, "salto corto llega a ~1,5 baldosas", "(%.2f)" % corto)
-    v.comprobar(2.8 <= largo <= 3.3, "salto largo llega a ~3 baldosas", "(%.2f)" % largo)
+    v.comprobar(4.2 <= largo <= 4.7, "salto largo llega a ~4,4 baldosas (sube a lo alto de los bloques)", "(%.2f)" % largo)
     v.comprobar(largo > corto + 1, "el salto largo es mas alto que el corto")
 
     v.comprobar(cruza_hueco(4, True), "correr cruza un hueco de 4 baldosas")
