@@ -19,14 +19,35 @@ Si abres Gemini en el navegador, conversas con un modelo que no conoce tu lista 
 ## Requisitos
 
 - Python 3.10 o superior (se probó con 3.12).
-- Una cuenta de Google para crear la clave gratuita de Gemini.
+- Una cuenta de Google (para la clave de Gemini) y una cuenta en Tavily (para la clave de Tavily). Ver [Claves obligatorias](#claves-obligatorias-gemini-y-tavily).
 - Las tres únicas dependencias están en `requirements.txt`: `flask`, `requests` y `python-dotenv`.
 
-## Cómo conseguir la clave gratuita de Gemini
+## Claves obligatorias: Gemini y Tavily
+
+> **Necesitas las dos claves. No son opcionales.** Ambas son gratuitas y no piden tarjeta. Cópialas y **no las compartas**.
+
+### Clave 1: Gemini (`GEMINI_API_KEY`)
 
 1. Entra en <https://aistudio.google.com/apikey> con tu cuenta de Google.
-2. Crea una clave (no pide tarjeta). Cópiala y **no la compartas**.
-3. Pégala en tu archivo `.env` (ver abajo). Nunca la escribas en el código.
+2. Pulsa **Create API key** (Crear clave de API) y elige un proyecto.
+3. Copia la clave. Empieza con `AIza`.
+
+### Clave 2: Tavily (`TAVILY_API_KEY`)
+
+1. Entra en <https://www.tavily.com> y crea una cuenta.
+2. En tu panel, copia tu **API key**. Empieza con `tvly-`.
+
+### Pégalas en `.env`
+
+Abre el archivo `.env` y pon las dos claves, sin comillas y sin espacios:
+
+```text
+GEMINI_API_KEY=AIza...
+TAVILY_API_KEY=tvly-...
+BUSQUEDA_WEB=0
+```
+
+Nunca escribas las claves en el código.
 
 ---
 
@@ -55,8 +76,8 @@ Copy-Item .env.example .env
 | `APP_PASSWORD` | La contraseña para entrar a la página |
 | `SECRET_KEY` | Una cadena larga y aleatoria (la genera el comando de abajo) |
 | `ZONA_HORARIA` | Por ejemplo `America/Guayaquil` |
-| `TAVILY_API_KEY` | *Opcional.* Clave gratuita de Tavily para buscar en toda la web (ver [Acceso a internet](#acceso-a-internet)) |
-| `BUSQUEDA_WEB` | *Opcional.* `0` (por defecto) o `1`. Con `1` usa la búsqueda de Google dentro de Gemini; **requiere facturación activada** en Google |
+| `TAVILY_API_KEY` | Tu clave de Tavily (obligatoria, empieza con `tvly-`) |
+| `BUSQUEDA_WEB` | Escribe `0` (obligatorio) |
 
 ```powershell
 # Generar una SECRET_KEY
@@ -85,27 +106,23 @@ Gemini por sí solo no tiene internet. Este proyecto le da herramientas para con
 | `consultar_clima` | Open-Meteo | Clima actual y pronóstico de 3 días de una ciudad | No |
 | `buscar_wikipedia` | Wikipedia en español | Datos generales: personas, lugares, historia, ciencia | No |
 | `buscar_web` | Tavily | Cualquier tema de la web (precios, resultados, recomendaciones…) | `TAVILY_API_KEY` |
-| Búsqueda de Google | Gemini (`google_search`) | Cualquier tema, con fuentes | `BUSQUEDA_WEB=1` y facturación |
 
 ### Una sola búsqueda general
 
 Para no duplicar llamadas ni gastar cuota de más, el asistente usa **una sola** herramienta de búsqueda general, elegida por esta prioridad:
 
-1. **Google Search**, si `BUSQUEDA_WEB=1`.
-2. **Tavily**, si hay `TAVILY_API_KEY`.
-3. **Wikipedia**, si no hay ninguna de las anteriores.
+1. **Tavily**, con `TAVILY_API_KEY`.
+2. **Wikipedia**, si Tavily no está disponible.
 
 Las noticias y el clima siempre están disponibles aparte, porque son gratis y no gastan la cuota de Tavily. Además, el asistente tiene la instrucción de hacer **una sola búsqueda por pregunta**.
 
-### Cómo activar Tavily (opcional)
+### Tavily en detalle
 
-1. Crea una cuenta en <https://www.tavily.com>. El plan gratuito da **1.000 créditos al mes, sin tarjeta**. Cada búsqueda cuesta 1 crédito. Los créditos se reinician el día 1 de cada mes.
-2. Copia tu clave (empieza con `tvly-`) y pégala en `.env`: `TAVILY_API_KEY=tvly-...`.
-3. Reinicia la aplicación. Si no pones la clave, el asistente usa Wikipedia y todo lo demás sigue igual.
+El plan gratuito da **1.000 créditos al mes, sin tarjeta**. Cada búsqueda cuesta 1 crédito. Los créditos se reinician el día 1 de cada mes.
 
 Si se acaba la cuota, el asistente avisa en el chat y las demás herramientas siguen funcionando.
 
-> **La búsqueda de Google (`BUSQUEDA_WEB=1`) no funciona en el plan gratuito de Gemini:** da el error 429. Solo actívala si tu proyecto de Google tiene facturación. Mientras tanto déjala en `0`.
+> **`BUSQUEDA_WEB` debe quedar en `0`.** La búsqueda de Google da error 429 en el plan gratuito de Gemini.
 
 ### Probar sin gastar cuota
 
