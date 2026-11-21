@@ -1,0 +1,6 @@
+.env
+.venv/
+datos/
+__pycache__/
+*.pyc
+*.corrupto

@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{{ nombre_bot }}</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E🤖%3C/text%3E%3C/svg%3E">
+  <link rel="stylesheet" href="{{ url_for('static', filename='estilo.css') }}">
+</head>
+<body>
+  <div class="aplicacion">
+    <header class="encabezado">
+      <div>
+        <h1>🤖 {{ nombre_bot }}</h1>
+        <p class="subtitulo">Tu asistente personal: recuerda, anota y organiza.</p>
+      </div>
+      <div class="acciones">
+        <button type="button" id="boton-borrar" class="secundario">Borrar conversación</button>
+        <form method="post" action="{{ url_for('salir') }}">
+          <button type="submit" class="secundario">Salir</button>
+        </form>
+      </div>
+    </header>
+
+    <main class="chat" id="chat" aria-label="Conversación">
+      <nav class="lateral" aria-label="Conversaciones">
+        <div class="lateral-cabecera">
+          <button type="button" id="boton-colapsar" class="icono secundario"
+                  aria-controls="pestanas" aria-expanded="true"
+                  data-ocultar="Ocultar la lista de conversaciones"
+                  data-mostrar="Mostrar la lista de conversaciones"
+                  title="Ocultar la lista de conversaciones"
+                  aria-label="Ocultar la lista de conversaciones">«</button>
+          <button type="button" id="boton-nuevo" class="secundario nuevo"
+                  data-largo="+ Nuevo" data-corto="+"
+                  title="Abrir un chat nuevo" aria-label="Abrir un chat nuevo">+ Nuevo</button>
+        </div>
+        <div id="pestanas" class="pestanas" role="tablist" aria-orientation="vertical"
+             aria-label="Conversaciones"
+             data-cerrar="Cerrar conversación"
+             data-confirmar="¿Cerrar esta conversación? Se borrará su historial."></div>
+      </nav>
+
+      <section class="conversacion">
+        <div id="mensajes" class="mensajes" aria-live="polite"
+             data-escribiendo="Escribiendo…"
+             data-error-red="No pude comunicarme con el servidor. Inténtalo de nuevo.">
+          <div class="burbuja bot" id="bienvenida">{{ bienvenida }}</div>
+        </div>
+
+        <form id="formulario" class="formulario">
+          <label for="campo" class="solo-lectores">Escribe tu mensaje</label>
+          <textarea id="campo" rows="2" maxlength="1000" autocomplete="off"
+                    placeholder="Escribe aquí… (Shift+Enter: nueva línea)"></textarea>
+          <button type="submit" id="boton-enviar">Enviar</button>
+        </form>
+      </section>
+    </main>
+
+    <aside class="panel" aria-label="Lo que guarda el asistente">
+      <section aria-labelledby="titulo-tareas">
+        <h2 id="titulo-tareas">Tareas</h2>
+        <ul id="lista-tareas" class="lista-tareas" data-vacio="Aún no hay tareas"></ul>
+      </section>
+      <section aria-labelledby="titulo-notas">
+        <h2 id="titulo-notas">Notas</h2>
+        <div id="lista-notas" class="lista-notas" data-vacio="Aún no hay notas"></div>
+      </section>
+      <section aria-labelledby="titulo-recuerdos">
+        <h2 id="titulo-recuerdos">Lo que recuerdo de ti</h2>
+        <p id="preferencias" class="preferencias" data-vacio="Aún no sé nada de ti."></p>
+      </section>
+    </aside>
+  </div>
+  <script src="{{ url_for('static', filename='chat.js') }}"></script>
+</body>
+</html>

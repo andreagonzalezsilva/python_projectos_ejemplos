@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Entrar · {{ nombre_bot }}</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E🤖%3C/text%3E%3C/svg%3E">
+  <link rel="stylesheet" href="{{ url_for('static', filename='estilo.css') }}">
+</head>
+<body>
+  <main class="pagina-login">
+    <div class="tarjeta-login">
+      <h1>🤖 {{ nombre_bot }}</h1>
+
+      {% if aviso %}
+        <div class="aviso" role="alert">
+          <strong>{{ aviso }}</strong>
+          <p>{{ ayuda }}</p>
+        </div>
+      {% else %}
+        {% if error %}
+          <div class="aviso-error" role="alert">{{ error }}</div>
+        {% endif %}
+        <form method="post" action="{{ url_for('login') }}">
+          <label for="contrasena">Contraseña</label>
+          <input type="password" id="contrasena" name="contrasena" autocomplete="current-password" required autofocus>
+          <button type="submit">Entrar</button>
+        </form>
+      {% endif %}
+    </div>
+  </main>
+</body>
+</html>

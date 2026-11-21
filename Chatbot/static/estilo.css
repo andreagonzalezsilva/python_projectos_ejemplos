@@ -1,0 +1,259 @@
+/* Estilo del asistente. CSS Grid para el diseno, una media query para el telefono. */
+:root {
+  --fondo: #f3f5f9;
+  --tarjeta: #ffffff;
+  --texto: #1b2333;
+  --suave: #4b5565;
+  --borde: #d5dbe6;
+  --principal: #1a56db;
+  --principal-oscuro: #1243b0;
+  --bot: #e9edf5;
+  --error-fondo: #fde8e8;
+  --error-texto: #8a1c1c;
+  --nota: #fff6d6;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  background: var(--fondo);
+  color: var(--texto);
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+  font-size: 1rem;
+  line-height: 1.5;
+}
+
+:focus-visible { outline: 3px solid #f59e0b; outline-offset: 2px; }
+
+.solo-lectores {
+  position: absolute;
+  width: 1px; height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+/* --- Diseno general: chat 65 % + panel 35 % --- */
+.aplicacion {
+  display: grid;
+  grid-template-columns: 65fr 35fr;
+  grid-template-rows: auto 1fr;
+  grid-template-areas: "encabezado encabezado" "chat panel";
+  gap: 1rem;
+  max-width: 1200px;
+  height: 100vh;
+  height: 100dvh;
+  margin: 0 auto;
+  padding: 1rem;
+}
+
+.encabezado {
+  grid-area: encabezado;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+.encabezado h1 { margin: 0; font-size: 1.6rem; }
+.subtitulo { margin: 0; color: var(--suave); }
+.acciones { display: flex; gap: 0.5rem; }
+.acciones form { margin: 0; }
+
+.chat, .panel {
+  background: var(--tarjeta);
+  border: 1px solid var(--borde);
+  border-radius: 12px;
+  min-height: 0;
+}
+/* El chat tiene dos columnas: la lista vertical de conversaciones y la conversacion */
+.chat {
+  grid-area: chat;
+  display: grid;
+  grid-template-columns: 13.5rem 1fr;
+  overflow: hidden;
+}
+.chat.colapsado { grid-template-columns: 3.4rem 1fr; }
+.conversacion {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+}
+.panel {
+  grid-area: panel;
+  padding: 1rem;
+  overflow-y: auto;
+}
+.panel h2 { margin: 0 0 0.5rem; font-size: 1.1rem; }
+.panel section + section { margin-top: 1.25rem; }
+
+/* --- Lista vertical de conversaciones (se puede colapsar) --- */
+.lateral {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  min-height: 0;
+  padding: 0.6rem;
+  background: var(--fondo);
+  border-right: 1px solid var(--borde);
+}
+.lateral-cabecera { display: flex; gap: 0.4rem; }
+.lateral-cabecera .nuevo { flex: 1; padding: 0.35rem 0.5rem; }
+button.icono { padding: 0.35rem 0.6rem; line-height: 1; }
+.pestanas {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  overflow-y: auto;
+  min-height: 0;
+}
+.pestana {
+  display: flex;
+  align-items: center;
+  border: 1px solid transparent;
+  border-left: 4px solid transparent;
+  border-radius: 8px;
+}
+.pestana:hover { background: #e4e9f2; }
+.pestana.activa { background: var(--tarjeta); border-color: var(--borde); border-left-color: var(--principal); }
+.pestana button {
+  background: transparent;
+  color: var(--suave);
+  font-weight: 500;
+  padding: 0.45rem 0.5rem;
+  border-radius: 0;
+}
+.pestana button:hover:not(:disabled) { background: #d6deee; }
+.pestana.activa button { color: var(--texto); font-weight: 700; }
+.titulo-pestana {
+  flex: 1;
+  min-width: 0;
+  text-align: left;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  border-radius: 6px 0 0 6px;
+}
+.cerrar-pestana { padding: 0.45rem 0.55rem; line-height: 1; border-radius: 0 6px 6px 0; }
+
+/* Colapsada: solo quedan los botones de ocultar y de nuevo chat */
+.chat.colapsado .lateral { padding: 0.6rem 0.4rem; align-items: stretch; }
+.chat.colapsado .lateral-cabecera { flex-direction: column; }
+.chat.colapsado .pestanas { display: none; }
+
+/* --- Mensajes --- */
+.mensajes {
+  flex: 1;
+  overflow-y: auto;
+  padding: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+.burbuja {
+  max-width: 85%;
+  padding: 0.6rem 0.9rem;
+  border-radius: 14px;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.burbuja.bot { align-self: flex-start; background: var(--bot); border-bottom-left-radius: 4px; }
+.burbuja.usuario { align-self: flex-end; background: var(--principal); color: #fff; border-bottom-right-radius: 4px; }
+.burbuja.error { align-self: flex-start; background: var(--error-fondo); color: var(--error-texto); border: 1px solid #f3b4b4; }
+.burbuja.escribiendo { color: var(--suave); font-style: italic; }
+
+/* --- Formulario --- */
+.formulario {
+  display: flex;
+  gap: 0.5rem;
+  padding: 0.75rem;
+  border-top: 1px solid var(--borde);
+}
+.formulario textarea {
+  flex: 1;
+  resize: none;
+  font: inherit;
+  padding: 0.5rem 0.7rem;
+  border: 1px solid var(--borde);
+  border-radius: 8px;
+}
+
+button {
+  font: inherit;
+  font-weight: 600;
+  padding: 0.5rem 1rem;
+  border: 0;
+  border-radius: 8px;
+  background: var(--principal);
+  color: #fff;
+  cursor: pointer;
+}
+button:hover:not(:disabled) { background: var(--principal-oscuro); }
+button:disabled, textarea:disabled { opacity: 0.55; cursor: not-allowed; }
+button.secundario { background: #fff; color: var(--principal); border: 1px solid var(--principal); }
+button.secundario:hover:not(:disabled) { background: #e8efff; }
+
+/* --- Panel --- */
+.lista-tareas { list-style: none; margin: 0; padding: 0; }
+.lista-tareas li { display: flex; align-items: flex-start; gap: 0.5rem; padding: 0.25rem 0; }
+.lista-tareas li.hecha span { text-decoration: line-through; color: var(--suave); }
+.lista-tareas input { margin-top: 0.4rem; width: 1rem; height: 1rem; }
+.lista-notas { display: flex; flex-direction: column; gap: 0.5rem; }
+.nota {
+  background: var(--nota);
+  border: 1px solid #ecd98a;
+  border-radius: 8px;
+  padding: 0.5rem 0.7rem;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.vacio, .preferencias { color: var(--suave); margin: 0; overflow-wrap: anywhere; }
+
+/* --- Login --- */
+.pagina-login { display: grid; place-items: center; min-height: 100vh; padding: 1rem; }
+.tarjeta-login {
+  width: 100%;
+  max-width: 380px;
+  background: var(--tarjeta);
+  border: 1px solid var(--borde);
+  border-radius: 12px;
+  padding: 1.5rem;
+}
+.tarjeta-login h1 { margin: 0 0 1rem; font-size: 1.5rem; }
+.tarjeta-login label { display: block; font-weight: 600; margin-bottom: 0.25rem; }
+.tarjeta-login input[type="password"] {
+  width: 100%;
+  font: inherit;
+  padding: 0.5rem 0.7rem;
+  margin-bottom: 1rem;
+  border: 1px solid var(--borde);
+  border-radius: 8px;
+}
+.tarjeta-login button { width: 100%; }
+.aviso, .aviso-error {
+  padding: 0.6rem 0.8rem;
+  border-radius: 8px;
+  margin-bottom: 1rem;
+}
+.aviso { background: var(--nota); border: 1px solid #ecd98a; }
+.aviso-error { background: var(--error-fondo); color: var(--error-texto); border: 1px solid #f3b4b4; }
+
+/* --- Telefono: el panel pasa debajo del chat --- */
+@media (max-width: 800px) {
+  .aplicacion {
+    display: block;
+    height: auto;
+    padding: 0.75rem;
+  }
+  .encabezado { margin-bottom: 0.75rem; }
+  .chat { height: 70vh; height: 70dvh; margin-bottom: 0.75rem; }
+  /* La lista de conversaciones pasa arriba del chat (y empieza oculta) */
+  .chat, .chat.colapsado { grid-template-columns: 1fr; grid-template-rows: auto minmax(0, 1fr); }
+  .lateral { border-right: 0; border-bottom: 1px solid var(--borde); }
+  .chat.colapsado .lateral { padding: 0.6rem; }
+  .chat.colapsado .lateral-cabecera { flex-direction: row; }
+  .pestanas { max-height: 7.5rem; }
+  .burbuja { max-width: 92%; }
+}
