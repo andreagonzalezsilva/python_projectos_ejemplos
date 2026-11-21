@@ -66,6 +66,7 @@ class PruebaSinSesion(PruebaWeb):
             self.cliente.post("/borrar", base_url=URL),
             self.post_json("/chats/nuevo", {}),
             self.post_json("/chats/cerrar", {"chat": 1}),
+            self.post_json("/tareas/marcar", {"id": 1, "hecha": True}),
         ]
         for respuesta in peticiones:
             self.assertEqual(respuesta.status_code, 401)
@@ -184,6 +185,42 @@ class PruebaChat(PruebaWeb):
         self.assertIn("Tareas", html)
         self.assertIn("Notas", html)
         self.assertIn("Lo que recuerdo de ti", html)
+
+    def test_casilla_marca_y_desmarca_una_tarea(self):
+        tarea = herramientas.agregar_tarea("comprar pan")["id"]
+        datos = self.post_json("/tareas/marcar", {"id": tarea, "hecha": True}).get_json()
+        self.assertTrue(datos["tareas"][0]["hecha"])
+        self.assertTrue(herramientas.todas_las_tareas()[0]["hecha"])  # quedo guardado
+        datos = self.post_json("/tareas/marcar", {"id": tarea, "hecha": False}).get_json()
+        self.assertFalse(datos["tareas"][0]["hecha"])
+
+    def test_casilla_con_datos_invalidos_o_tarea_inexistente(self):
+        herramientas.agregar_tarea("comprar pan")
+        invalidos = [{}, {"id": 1}, {"hecha": True}, {"id": "1", "hecha": True},
+                     {"id": True, "hecha": True}, {"id": 1, "hecha": "si"}, [], None]
+        for cuerpo in invalidos:
+            with self.subTest(cuerpo=cuerpo):
+                respuesta = self.post_json("/tareas/marcar", cuerpo)
+                self.assertEqual(respuesta.status_code, 400)
+                self.assertEqual(respuesta.get_json()["error"], textos.ERROR_PETICION_INVALIDA)
+        respuesta = self.post_json("/tareas/marcar", {"id": 99, "hecha": True})
+        self.assertEqual(respuesta.status_code, 404)
+        self.assertIn("99", respuesta.get_json()["error"])
+        self.assertFalse(herramientas.todas_las_tareas()[0]["hecha"])
+
+    def test_bienvenida_muestra_el_nombre_del_usuario(self):
+        sin_nombre = self.cliente.get("/", base_url=URL).get_data(as_text=True)
+        self.assertIn("Bienvenido/a", sin_nombre)
+        self.assertNotIn('class="intro-nombre"', sin_nombre)
+        memoria.guardar_preferencia("nombre", "Ana")
+        con_nombre = self.cliente.get("/", base_url=URL).get_data(as_text=True)
+        self.assertIn('<p class="intro-nombre">Ana</p>', con_nombre)
+
+    def test_nombre_del_usuario_no_inyecta_html(self):
+        memoria.guardar_preferencia("nombre", "<script>alert(1)</script>")
+        html = self.cliente.get("/", base_url=URL).get_data(as_text=True)
+        self.assertNotIn("<script>alert(1)</script>", html)
+        self.assertIn("&lt;script&gt;", html)
 
     def test_chat_responde_y_devuelve_el_estado(self):
         self.respuestas += [

@@ -88,15 +88,20 @@ def listar_tareas(solo_pendientes=True):
     return {"tareas": tareas}
 
 
-def completar_tarea(id):
+def marcar_tarea(id, hecha):
+    """Marca una tarea como hecha o pendiente. La usan completar_tarea y la casilla de la web."""
     with _candado:
         datos = almacen.leer_json(ARCHIVO_TAREAS, {"siguiente_id": 1, "tareas": []})
         for tarea in datos["tareas"]:
             if tarea["id"] == id:
-                tarea["hecha"] = True
+                tarea["hecha"] = hecha
                 almacen.escribir_json(ARCHIVO_TAREAS, datos)
-                return {"id": id, "hecha": True}
+                return {"id": id, "hecha": hecha}
     return _error(textos.HERRAMIENTA_NO_EXISTE_TAREA.format(id=id))
+
+
+def completar_tarea(id):
+    return marcar_tarea(id, True)
 
 
 def agregar_nota(texto):

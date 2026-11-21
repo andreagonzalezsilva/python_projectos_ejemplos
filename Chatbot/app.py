@@ -9,6 +9,7 @@ Rutas:
   /salir         cierra la sesion
   /chat          recibe un mensaje y devuelve la respuesta (JSON)
   /estado        devuelve tareas, notas, preferencias, conversaciones e historial (JSON)
+  /tareas/marcar marca una tarea como hecha o pendiente (la casilla del panel)
   /borrar        borra el historial de una conversacion
   /chats/nuevo   abre una conversacion nueva (una pestana mas)
   /chats/cerrar  cierra una conversacion y borra su historial
@@ -131,9 +132,11 @@ def agregar_cabeceras(respuesta):
 @app.get("/")
 @requiere_sesion
 def inicio():
+    nombre_usuario = str(memoria.cargar_preferencias().get("nombre", "")).strip()
     return render_template(
         "chat.html",
         nombre_bot=configuracion.BOT_NAME,
+        nombre_usuario=nombre_usuario,
         bienvenida=textos.BIENVENIDA.format(nombre_bot=configuracion.BOT_NAME),
     )
 
@@ -218,6 +221,20 @@ def chat_cerrar():
     except memoria.ConversacionNoExiste:
         return _no_existe()
     return jsonify({"ok": True, "conversaciones": memoria.listar_conversaciones()})
+
+
+@app.post("/tareas/marcar")
+@requiere_sesion_json
+def tarea_marcar():
+    """La casilla de una tarea: la marca como hecha o la devuelve a pendiente."""
+    cuerpo = _cuerpo_json()
+    id_tarea, hecha = cuerpo.get("id"), cuerpo.get("hecha")
+    if _id_valido(id_tarea) is None or not isinstance(hecha, bool):
+        return respuesta_de_error(textos.ERROR_PETICION_INVALIDA, 400)
+    resultado = herramientas.marcar_tarea(id_tarea, hecha)
+    if "error" in resultado:
+        return respuesta_de_error(resultado["error"], 404)
+    return jsonify(estado_actual())
 
 
 @app.route("/login", methods=["GET", "POST"])

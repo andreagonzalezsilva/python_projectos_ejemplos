@@ -1,16 +1,23 @@
-/* Estilo del asistente. CSS Grid para el diseno, una media query para el telefono. */
+/* Estilo del asistente: tema oscuro tipo HUD. CSS Grid para el diseno, una media query para el telefono.
+   Los efectos (rejilla, barrido, circulo grande) viven en el login y en la bienvenida;
+   el chat es plano y tranquilo, con un solo color de acento. */
 :root {
-  --fondo: #f3f5f9;
-  --tarjeta: #ffffff;
-  --texto: #1b2333;
-  --suave: #4b5565;
-  --borde: #d5dbe6;
-  --principal: #1a56db;
-  --principal-oscuro: #1243b0;
-  --bot: #e9edf5;
-  --error-fondo: #fde8e8;
-  --error-texto: #8a1c1c;
-  --nota: #fff6d6;
+  color-scheme: dark;
+  --fondo: #070b12;
+  --superficie: #0d131d;
+  --superficie-2: #131b28;
+  --borde: #1f2a3b;
+  --borde-fuerte: #2c3b52;
+  --texto: #e6edf7;
+  --suave: #8d9db5;
+  --acento: #22d3ee;
+  --acento-fuerte: #67e8f9;
+  --sobre-acento: #03141b;
+  --error: #ff6b78;
+  --error-fondo: rgba(255, 107, 120, 0.1);
+  --error-borde: rgba(255, 107, 120, 0.4);
+  --nota-fondo: rgba(251, 191, 36, 0.07);
+  --nota-borde: rgba(251, 191, 36, 0.28);
 }
 
 * { box-sizing: border-box; }
@@ -22,9 +29,10 @@ body {
   font-family: system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
   font-size: 1rem;
   line-height: 1.5;
+  scrollbar-color: var(--borde-fuerte) transparent;
 }
 
-:focus-visible { outline: 3px solid #f59e0b; outline-offset: 2px; }
+:focus-visible { outline: 2px solid var(--acento-fuerte); outline-offset: 2px; }
 
 .solo-lectores {
   position: absolute;
@@ -34,7 +42,276 @@ body {
   white-space: nowrap;
 }
 
-/* --- Diseno general: chat 65 % + panel 35 % --- */
+/* =========================================================
+   Circulo (orbe): anillos que giran y un nucleo que late
+   ========================================================= */
+.orbe {
+  --color: var(--acento);
+  --brillo: rgba(34, 211, 238, 0.55);
+  color: var(--color);
+  display: block;
+  flex: none;
+}
+.orbe.error { --color: var(--error); --brillo: rgba(255, 107, 120, 0.6); }
+.orbe-svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+  filter: drop-shadow(0 0 7px var(--brillo));
+  transition: filter 0.4s;
+}
+.orbe-svg circle {
+  fill: none;
+  stroke: currentColor;
+  transform-box: fill-box;
+  transform-origin: center;
+}
+.a-marcas { stroke-width: 6; stroke-dasharray: 1.5 7.185; opacity: 0.55; animation: girar 60s linear infinite; }
+.b-segmentos { stroke-width: 2; stroke-dasharray: 80 23.04; opacity: 0.85; animation: girar 26s linear infinite reverse; }
+.c-fino { stroke-width: 1; opacity: 0.45; }
+.d-arcos { stroke-width: 5; stroke-dasharray: 80 37.29; animation: girar 14s linear infinite; }
+.e-puntos { stroke-width: 1.5; stroke-dasharray: 2 5; opacity: 0.6; }
+.nucleo-halo { fill: currentColor; stroke: none; opacity: 0.14; animation: latido 3.4s ease-in-out infinite; }
+.nucleo { fill: currentColor; stroke: none; animation: latido 3.4s ease-in-out infinite; }
+
+@keyframes girar { to { transform: rotate(360deg); } }
+@keyframes latido { 50% { transform: scale(1.14); } }
+
+/* "Pensando": el nucleo late rapido, el brillo sube y el anillo interior gira */
+.orbe.pensando { --brillo: rgba(34, 211, 238, 0.95); }
+.orbe.pensando .nucleo,
+.orbe.pensando .nucleo-halo { animation-duration: 0.8s; }
+.orbe.pensando .e-puntos { animation: girar 2.4s linear infinite; opacity: 1; }
+.orbe.pensando .d-arcos { animation-duration: 3s; }
+
+/* Version pequena (encabezado): sin marcas finas y con trazos mas gruesos para que se vean */
+.orbe-cabecera { width: 46px; height: 46px; transition: opacity 0.2s; }
+.orbe-cabecera .orbe-svg { filter: drop-shadow(0 0 3px var(--brillo)); }
+.orbe-cabecera .a-marcas,
+.orbe-cabecera .e-puntos { display: none; }
+.orbe-cabecera .b-segmentos { stroke-width: 6; }
+.orbe-cabecera .c-fino { stroke-width: 4; }
+.orbe-cabecera .d-arcos { stroke-width: 10; }
+.orbe-cabecera.pensando .e-puntos { display: block; stroke-width: 5; }
+
+/* =========================================================
+   Fondo HUD (login y bienvenida): degradado, rejilla y barrido
+   ========================================================= */
+.fondo-hud {
+  position: relative;
+  overflow: hidden;
+  background: radial-gradient(ellipse at 50% 38%, #0b2a3a 0%, #070b12 58%, #04070c 100%);
+}
+.fondo-hud::before,
+.fondo-hud::after {
+  content: "";
+  position: absolute;
+  pointer-events: none;
+}
+.fondo-hud::before {
+  inset: 0;
+  background-image:
+    linear-gradient(rgba(34, 211, 238, 0.06) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(34, 211, 238, 0.06) 1px, transparent 1px);
+  background-size: 44px 44px;
+  -webkit-mask-image: radial-gradient(ellipse at center, #000 15%, transparent 72%);
+  mask-image: radial-gradient(ellipse at center, #000 15%, transparent 72%);
+}
+.fondo-hud::after {
+  left: 0; right: 0; top: 0;
+  height: 140px;
+  background: linear-gradient(to bottom, transparent, rgba(34, 211, 238, 0.07), transparent);
+  animation: barrido 9s linear infinite;
+}
+@keyframes barrido {
+  from { transform: translateY(-100%); }
+  to { transform: translateY(100vh); }
+}
+
+/* --- Login --- */
+.pagina-login {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  min-height: 100dvh;
+  padding: 1.5rem 1rem;
+}
+.orbe-login { width: min(62vw, 230px); height: min(62vw, 230px); animation: aparecer 1.1s ease-out both; }
+.orbe-login.error { animation: sacudir 0.5s ease-in-out; }
+.marca {
+  margin: 1.25rem 0 1.5rem;
+  font-size: 1.15rem;
+  font-weight: 600;
+  letter-spacing: 0.35em;
+  text-indent: 0.35em;
+  text-transform: uppercase;
+  text-shadow: 0 0 14px rgba(34, 211, 238, 0.55);
+  text-align: center;
+}
+.formulario-login { width: 100%; max-width: 300px; animation: subir 0.8s 0.3s ease-out both; }
+.formulario-login label {
+  display: block;
+  margin-bottom: 0.35rem;
+  color: var(--suave);
+  font-size: 0.8rem;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+.formulario-login input[type="password"] {
+  width: 100%;
+  font: inherit;
+  padding: 0.65rem 0.85rem;
+  margin-bottom: 1rem;
+  background: rgba(7, 11, 18, 0.75);
+  color: var(--texto);
+  border: 1px solid #25405a;
+  border-radius: 8px;
+}
+.formulario-login input[type="password"]:focus {
+  border-color: var(--acento);
+  box-shadow: 0 0 0 3px rgba(34, 211, 238, 0.18);
+  outline: none;
+}
+.formulario-login button { width: 100%; padding: 0.65rem 1rem; }
+.aviso, .aviso-error {
+  width: 100%;
+  max-width: 340px;
+  padding: 0.6rem 0.85rem;
+  border-radius: 8px;
+  margin-bottom: 1rem;
+}
+.aviso { background: var(--nota-fondo); border: 1px solid var(--nota-borde); }
+.aviso p { margin: 0.25rem 0 0; color: var(--suave); }
+.aviso-error { background: var(--error-fondo); color: var(--error); border: 1px solid var(--error-borde); text-align: center; }
+
+@keyframes aparecer { from { opacity: 0; transform: scale(0.6) rotate(-45deg); } }
+@keyframes subir { from { opacity: 0; transform: translateY(14px); } }
+@keyframes sacudir {
+  20% { transform: translateX(-10px); }
+  40% { transform: translateX(9px); }
+  60% { transform: translateX(-6px); }
+  80% { transform: translateX(4px); }
+}
+
+/* =========================================================
+   Bienvenida despues del login (la activa la clase con-intro)
+   ========================================================= */
+.intro {
+  display: none;
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  align-items: center;
+  justify-content: center;
+  /* Si el JavaScript fallara, la capa se retira sola y nunca bloquea el chat */
+  animation: intro-seguro 0s 8s forwards;
+}
+.con-intro .intro { display: flex; }
+@keyframes intro-seguro { to { visibility: hidden; pointer-events: none; } }
+
+.intro-fondo { position: absolute; inset: 0; transition: opacity 0.7s ease; }
+.intro-contenido {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 1rem;
+  text-align: center;
+}
+.orbe-intro {
+  width: min(66vw, 300px);
+  height: min(66vw, 300px);
+  animation: aparecer 0.9s ease-out both;
+  transition: transform 0.8s cubic-bezier(0.65, 0, 0.25, 1);
+}
+.orbe-intro .orbe-svg { filter: drop-shadow(0 0 12px var(--brillo)); }
+.intro[data-etapa="acceso"] .orbe-intro,
+.intro[data-etapa="bienvenida"] .orbe-intro { --brillo: rgba(34, 211, 238, 0.9); }
+.intro[data-etapa="acceso"] .d-arcos,
+.intro[data-etapa="bienvenida"] .d-arcos { animation-duration: 3.5s; }
+.intro[data-etapa="acceso"] .b-segmentos,
+.intro[data-etapa="bienvenida"] .b-segmentos { animation-duration: 7s; }
+.intro[data-etapa="acceso"] .nucleo,
+.intro[data-etapa="bienvenida"] .nucleo { animation-duration: 1s; }
+
+.intro-estado {
+  min-height: 1.5em;
+  margin: 1.5rem 0 0.5rem;
+  color: var(--acento-fuerte);
+  font-size: 0.9rem;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+}
+.intro-estado::after {
+  content: "";
+  display: inline-block;
+  width: 0.5em; height: 1em;
+  margin-left: 0.3em;
+  vertical-align: text-bottom;
+  background: var(--acento-fuerte);
+  animation: parpadeo 0.9s steps(2) infinite;
+}
+@keyframes parpadeo { 50% { opacity: 0; } }
+
+.intro-titulo,
+.intro-nombre {
+  margin: 0;
+  opacity: 0;
+  transform: translateY(10px);
+  transition: opacity 0.6s ease, transform 0.6s ease, letter-spacing 1s ease;
+}
+.intro-titulo {
+  font-size: clamp(1.7rem, 7vw, 2.6rem);
+  font-weight: 300;
+  letter-spacing: 0.3em;
+  text-indent: 0.3em;
+  text-transform: uppercase;
+  text-shadow: 0 0 18px rgba(34, 211, 238, 0.7);
+}
+.intro-nombre {
+  max-width: min(90vw, 28rem);
+  margin-top: 0.6rem;
+  color: var(--acento-fuerte);
+  font-size: clamp(1.1rem, 4.5vw, 1.6rem);
+  letter-spacing: 0.25em;
+  text-indent: 0.25em;
+  text-transform: uppercase;
+  text-shadow: 0 0 14px rgba(34, 211, 238, 0.5);
+  overflow-wrap: anywhere;
+}
+.intro[data-etapa="bienvenida"] .intro-titulo,
+.intro[data-etapa="bienvenida"] .intro-nombre { opacity: 1; transform: none; }
+.intro[data-etapa="bienvenida"] .intro-titulo { letter-spacing: 0.45em; text-indent: 0.45em; }
+
+.intro-saltar {
+  position: absolute;
+  bottom: 1.25rem;
+  margin: 0;
+  color: var(--suave);
+  font-size: 0.8rem;
+  letter-spacing: 0.08em;
+  opacity: 0.7;
+}
+
+/* Salida: el texto se apaga, el fondo se vuelve transparente y el circulo viaja al encabezado */
+.intro[data-etapa="salida"] .intro-fondo { opacity: 0; }
+.intro[data-etapa="salida"] .intro-estado,
+.intro[data-etapa="salida"] .intro-titulo,
+.intro[data-etapa="salida"] .intro-nombre,
+.intro[data-etapa="salida"] .intro-saltar { opacity: 0; transition: opacity 0.3s ease; }
+.con-intro .orbe-cabecera { opacity: 0; }
+.intro-fin .orbe-cabecera { opacity: 1; }
+.intro-fin .intro { opacity: 0; transition: opacity 0.25s ease; pointer-events: none; }
+
+/* =========================================================
+   Chat
+   ========================================================= */
 .aplicacion {
   display: grid;
   grid-template-columns: 65fr 35fr;
@@ -47,6 +324,7 @@ body {
   margin: 0 auto;
   padding: 1rem;
 }
+.aplicacion.panel-colapsado { grid-template-columns: minmax(0, 1fr) 3.4rem; }
 
 .encabezado {
   grid-area: encabezado;
@@ -56,13 +334,20 @@ body {
   justify-content: space-between;
   gap: 0.75rem;
 }
-.encabezado h1 { margin: 0; font-size: 1.6rem; }
-.subtitulo { margin: 0; color: var(--suave); }
+.marca-cabecera { display: flex; align-items: center; gap: 0.85rem; }
+.encabezado h1 {
+  margin: 0;
+  font-size: 1.1rem;
+  font-weight: 600;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+}
+.subtitulo { margin: 0; color: var(--suave); font-size: 0.9rem; }
 .acciones { display: flex; gap: 0.5rem; }
 .acciones form { margin: 0; }
 
 .chat, .panel {
-  background: var(--tarjeta);
+  background: var(--superficie);
   border: 1px solid var(--borde);
   border-radius: 12px;
   min-height: 0;
@@ -81,13 +366,42 @@ body {
   min-width: 0;
   min-height: 0;
 }
+
+/* --- Panel (se puede colapsar igual que la lista de conversaciones) --- */
 .panel {
   grid-area: panel;
-  padding: 1rem;
-  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
 }
-.panel h2 { margin: 0 0 0.5rem; font-size: 1.1rem; }
-.panel section + section { margin-top: 1.25rem; }
+.panel-cabecera {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding: 0.6rem 0.6rem 0.6rem 1rem;
+  border-bottom: 1px solid var(--borde);
+}
+.panel-titulo {
+  color: var(--suave);
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+.panel-contenido { flex: 1; min-height: 0; overflow-y: auto; padding: 1rem; }
+.panel h2 {
+  margin: 0 0 0.5rem;
+  color: var(--acento-fuerte);
+  font-size: 0.78rem;
+  font-weight: 600;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+.panel section + section { margin-top: 1.4rem; padding-top: 1.1rem; border-top: 1px solid var(--borde); }
+.aplicacion.panel-colapsado .panel-titulo,
+.aplicacion.panel-colapsado .panel-contenido { display: none; }
+.aplicacion.panel-colapsado .panel-cabecera { justify-content: center; padding: 0.6rem 0.4rem; border-bottom: 0; }
 
 /* --- Lista vertical de conversaciones (se puede colapsar) --- */
 .lateral {
@@ -113,11 +427,11 @@ button.icono { padding: 0.35rem 0.6rem; line-height: 1; }
   display: flex;
   align-items: center;
   border: 1px solid transparent;
-  border-left: 4px solid transparent;
+  border-left: 3px solid transparent;
   border-radius: 8px;
 }
-.pestana:hover { background: #e4e9f2; }
-.pestana.activa { background: var(--tarjeta); border-color: var(--borde); border-left-color: var(--principal); }
+.pestana:hover { background: var(--superficie-2); }
+.pestana.activa { background: var(--superficie-2); border-color: var(--borde); border-left-color: var(--acento); }
 .pestana button {
   background: transparent;
   color: var(--suave);
@@ -125,7 +439,7 @@ button.icono { padding: 0.35rem 0.6rem; line-height: 1; }
   padding: 0.45rem 0.5rem;
   border-radius: 0;
 }
-.pestana button:hover:not(:disabled) { background: #d6deee; }
+.pestana button:hover:not(:disabled) { background: rgba(34, 211, 238, 0.1); color: var(--texto); }
 .pestana.activa button { color: var(--texto); font-weight: 700; }
 .titulo-pestana {
   flex: 1;
@@ -159,9 +473,9 @@ button.icono { padding: 0.35rem 0.6rem; line-height: 1; }
   white-space: pre-wrap;
   overflow-wrap: anywhere;
 }
-.burbuja.bot { align-self: flex-start; background: var(--bot); border-bottom-left-radius: 4px; }
-.burbuja.usuario { align-self: flex-end; background: var(--principal); color: #fff; border-bottom-right-radius: 4px; }
-.burbuja.error { align-self: flex-start; background: var(--error-fondo); color: var(--error-texto); border: 1px solid #f3b4b4; }
+.burbuja.bot { align-self: flex-start; background: var(--superficie-2); border: 1px solid var(--borde); border-bottom-left-radius: 4px; }
+.burbuja.usuario { align-self: flex-end; background: linear-gradient(135deg, #22d3ee, #0ea5e9); color: var(--sobre-acento); border-bottom-right-radius: 4px; }
+.burbuja.error { align-self: flex-start; background: var(--error-fondo); color: var(--error); border: 1px solid var(--error-borde); }
 .burbuja.escribiendo { color: var(--suave); font-style: italic; }
 
 /* --- Formulario --- */
@@ -176,9 +490,13 @@ button.icono { padding: 0.35rem 0.6rem; line-height: 1; }
   resize: none;
   font: inherit;
   padding: 0.5rem 0.7rem;
-  border: 1px solid var(--borde);
+  background: var(--fondo);
+  color: var(--texto);
+  border: 1px solid var(--borde-fuerte);
   border-radius: 8px;
 }
+.formulario textarea::placeholder { color: var(--suave); }
+.formulario textarea:focus { border-color: var(--acento); }
 
 button {
   font: inherit;
@@ -186,24 +504,27 @@ button {
   padding: 0.5rem 1rem;
   border: 0;
   border-radius: 8px;
-  background: var(--principal);
-  color: #fff;
+  background: var(--acento);
+  color: var(--sobre-acento);
   cursor: pointer;
+  transition: background 0.15s, box-shadow 0.15s, border-color 0.15s;
 }
-button:hover:not(:disabled) { background: var(--principal-oscuro); }
-button:disabled, textarea:disabled { opacity: 0.55; cursor: not-allowed; }
-button.secundario { background: #fff; color: var(--principal); border: 1px solid var(--principal); }
-button.secundario:hover:not(:disabled) { background: #e8efff; }
+button:hover:not(:disabled) { background: var(--acento-fuerte); box-shadow: 0 0 14px rgba(34, 211, 238, 0.45); }
+button:disabled, textarea:disabled { opacity: 0.5; cursor: not-allowed; }
+button.secundario { background: transparent; color: var(--texto); border: 1px solid var(--borde-fuerte); }
+button.secundario:hover:not(:disabled) { background: rgba(34, 211, 238, 0.08); border-color: var(--acento); box-shadow: none; }
 
-/* --- Panel --- */
+/* --- Contenido del panel --- */
 .lista-tareas { list-style: none; margin: 0; padding: 0; }
-.lista-tareas li { display: flex; align-items: flex-start; gap: 0.5rem; padding: 0.25rem 0; }
+.lista-tareas li { padding: 0.25rem 0; }
+.lista-tareas .tarea { display: flex; align-items: flex-start; gap: 0.5rem; cursor: pointer; overflow-wrap: anywhere; }
 .lista-tareas li.hecha span { text-decoration: line-through; color: var(--suave); }
-.lista-tareas input { margin-top: 0.4rem; width: 1rem; height: 1rem; }
+.lista-tareas input { flex: none; margin: 0.3rem 0 0; width: 1.05rem; height: 1.05rem; accent-color: var(--acento); cursor: pointer; }
+.lista-tareas input:disabled { cursor: progress; }
 .lista-notas { display: flex; flex-direction: column; gap: 0.5rem; }
 .nota {
-  background: var(--nota);
-  border: 1px solid #ecd98a;
+  background: var(--nota-fondo);
+  border: 1px solid var(--nota-borde);
   border-radius: 8px;
   padding: 0.5rem 0.7rem;
   white-space: pre-wrap;
@@ -211,43 +532,16 @@ button.secundario:hover:not(:disabled) { background: #e8efff; }
 }
 .vacio, .preferencias { color: var(--suave); margin: 0; overflow-wrap: anywhere; }
 
-/* --- Login --- */
-.pagina-login { display: grid; place-items: center; min-height: 100vh; padding: 1rem; }
-.tarjeta-login {
-  width: 100%;
-  max-width: 380px;
-  background: var(--tarjeta);
-  border: 1px solid var(--borde);
-  border-radius: 12px;
-  padding: 1.5rem;
-}
-.tarjeta-login h1 { margin: 0 0 1rem; font-size: 1.5rem; }
-.tarjeta-login label { display: block; font-weight: 600; margin-bottom: 0.25rem; }
-.tarjeta-login input[type="password"] {
-  width: 100%;
-  font: inherit;
-  padding: 0.5rem 0.7rem;
-  margin-bottom: 1rem;
-  border: 1px solid var(--borde);
-  border-radius: 8px;
-}
-.tarjeta-login button { width: 100%; }
-.aviso, .aviso-error {
-  padding: 0.6rem 0.8rem;
-  border-radius: 8px;
-  margin-bottom: 1rem;
-}
-.aviso { background: var(--nota); border: 1px solid #ecd98a; }
-.aviso-error { background: var(--error-fondo); color: var(--error-texto); border: 1px solid #f3b4b4; }
-
 /* --- Telefono: el panel pasa debajo del chat --- */
 @media (max-width: 800px) {
-  .aplicacion {
+  .aplicacion,
+  .aplicacion.panel-colapsado {
     display: block;
     height: auto;
     padding: 0.75rem;
   }
   .encabezado { margin-bottom: 0.75rem; }
+  .subtitulo { display: none; }
   .chat { height: 70vh; height: 70dvh; margin-bottom: 0.75rem; }
   /* La lista de conversaciones pasa arriba del chat (y empieza oculta) */
   .chat, .chat.colapsado { grid-template-columns: 1fr; grid-template-rows: auto minmax(0, 1fr); }
@@ -256,4 +550,21 @@ button.secundario:hover:not(:disabled) { background: #e8efff; }
   .chat.colapsado .lateral-cabecera { flex-direction: row; }
   .pestanas { max-height: 7.5rem; }
   .burbuja { max-width: 92%; }
+  .aplicacion.panel-colapsado .panel-titulo { display: inline; }
+  .aplicacion.panel-colapsado .panel-cabecera { justify-content: space-between; padding: 0.6rem 0.6rem 0.6rem 1rem; }
+}
+
+/* --- Sin movimiento: quietos los anillos, la rejilla y la bienvenida --- */
+@media (prefers-reduced-motion: reduce) {
+  .orbe *,
+  .orbe-login,
+  .orbe-intro,
+  .formulario-login,
+  .fondo-hud::after,
+  .intro-estado::after { animation: none !important; }
+  .orbe-intro,
+  .intro-titulo,
+  .intro-nombre,
+  .intro-fondo { transition-duration: 0.2s !important; }
+  .orbe-login.error .orbe-svg { filter: drop-shadow(0 0 12px var(--brillo)); }
 }

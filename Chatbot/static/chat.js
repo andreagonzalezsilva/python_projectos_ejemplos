@@ -8,6 +8,9 @@ const zonaPestanas = document.getElementById("pestanas");
 const botonNuevo = document.getElementById("boton-nuevo");
 const zonaChat = document.getElementById("chat");
 const botonColapsar = document.getElementById("boton-colapsar");
+const zonaAplicacion = document.querySelector(".aplicacion");
+const botonPanel = document.getElementById("boton-panel");
+const orbe = document.getElementById("orbe-cabecera");
 
 // Conversaciones (pestanas): cada una tiene su historial; tareas, notas y preferencias son comunes
 let chatActivo = null;
@@ -15,6 +18,7 @@ let conversaciones = [];
 let ocupado = false;
 const CLAVE_CHAT = "chatActivo";
 const CLAVE_COLAPSADO = "listaColapsada";
+const CLAVE_PANEL = "panelColapsado";
 
 function crear(etiqueta, clase, texto) {
   const elemento = document.createElement(etiqueta);
@@ -23,7 +27,14 @@ function crear(etiqueta, clase, texto) {
   return elemento;
 }
 
+// El orbe del encabezado parpadea en rojo un momento cuando algo sale mal
+function destellarError() {
+  orbe.classList.add("error");
+  window.setTimeout(() => orbe.classList.remove("error"), 1600);
+}
+
 function agregarBurbuja(clase, texto) {
+  if (clase === "error") destellarError();
   const burbuja = crear("div", "burbuja " + clase, texto);
   zonaMensajes.appendChild(burbuja);
   zonaMensajes.scrollTop = zonaMensajes.scrollHeight;
@@ -43,10 +54,13 @@ function pintarPanel(datos) {
       const casilla = crear("input");
       casilla.type = "checkbox";
       casilla.checked = tarea.hecha;
-      casilla.disabled = true;
-      casilla.setAttribute("aria-label", tarea.hecha ? "hecha" : "pendiente");
+      casilla.dataset.id = tarea.id;
+      casilla.addEventListener("change", () => marcarTarea(tarea.id, casilla));
+      // La etiqueta envuelve la casilla y el texto: se puede pulsar cualquiera de los dos
+      const etiqueta = crear("label", "tarea");
+      etiqueta.append(casilla, crear("span", "", tarea.texto));
       const fila = crear("li", tarea.hecha ? "hecha" : "");
-      fila.append(casilla, crear("span", "", tarea.texto));
+      fila.append(etiqueta);
       return fila;
     }));
   }
@@ -56,6 +70,24 @@ function pintarPanel(datos) {
     const parrafo = document.getElementById("preferencias");
     parrafo.textContent = filas.length ? filas.join(", ") : parrafo.dataset.vacio;
   }
+}
+
+// Marca o desmarca una tarea desde la casilla. El servidor devuelve el estado completo y se repinta.
+async function marcarTarea(id, casilla) {
+  casilla.disabled = true;
+  try {
+    const { ok, datos } = await pedir("/tareas/marcar", { id, hecha: casilla.checked });
+    pintarPanel(datos);
+    if (!ok) agregarBurbuja("error", datos.error);
+  } catch (error) {
+    casilla.checked = !casilla.checked;
+    casilla.disabled = false;
+    agregarBurbuja("error", zonaMensajes.dataset.errorRed);
+    return;
+  }
+  // El panel se repinta entero: se devuelve el foco a la casilla para quien usa el teclado
+  const nueva = document.querySelector('#lista-tareas input[data-id="' + id + '"]');
+  if (nueva) nueva.focus();
 }
 
 async function pedir(url, cuerpo) {
@@ -112,6 +144,22 @@ botonColapsar.addEventListener("click", () => {
   const colapsado = !zonaChat.classList.contains("colapsado");
   aplicarColapso(colapsado);
   localStorage.setItem(CLAVE_COLAPSADO, colapsado ? "1" : "0");
+});
+
+// Muestra u oculta el panel de tareas, notas y recuerdos (queda una franja angosta)
+function aplicarPanel(colapsado) {
+  zonaAplicacion.classList.toggle("panel-colapsado", colapsado);
+  botonPanel.textContent = colapsado ? "«" : "»";
+  botonPanel.setAttribute("aria-expanded", colapsado ? "false" : "true");
+  const texto = colapsado ? botonPanel.dataset.mostrar : botonPanel.dataset.ocultar;
+  botonPanel.title = texto;
+  botonPanel.setAttribute("aria-label", texto);
+}
+
+botonPanel.addEventListener("click", () => {
+  const colapsado = !zonaAplicacion.classList.contains("panel-colapsado");
+  aplicarPanel(colapsado);
+  localStorage.setItem(CLAVE_PANEL, colapsado ? "1" : "0");
 });
 
 function guardarConversaciones(datos) {
@@ -191,6 +239,7 @@ async function enviar(texto) {
   agregarBurbuja("usuario", texto);
   const escribiendo = agregarBurbuja("bot escribiendo", zonaMensajes.dataset.escribiendo);
   bloquear(true);
+  orbe.classList.add("pensando");
   try {
     const { ok, estado, datos } = await pedir("/chat", { mensaje: texto, chat: chatActivo });
     if (estado === 404) {
@@ -208,6 +257,7 @@ async function enviar(texto) {
     agregarBurbuja("error", zonaMensajes.dataset.errorRed);
   }
   escribiendo.remove();
+  orbe.classList.remove("pensando");
   bloquear(false);
   campo.focus();
 }
@@ -244,6 +294,7 @@ document.getElementById("boton-borrar").addEventListener("click", async () => {
 (async () => {
   const preferencia = localStorage.getItem(CLAVE_COLAPSADO);
   aplicarColapso(preferencia === null ? window.matchMedia("(max-width: 800px)").matches : preferencia === "1");
+  aplicarPanel(localStorage.getItem(CLAVE_PANEL) === "1");
   const guardado = Number.parseInt(localStorage.getItem(CLAVE_CHAT), 10);
   await cargarChat(Number.isNaN(guardado) ? null : guardado);
 })();
